@@ -1,5 +1,6 @@
 package com.david.worldcup.data;
 
+import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 
 import java.io.BufferedReader;
@@ -19,13 +20,14 @@ import java.util.Optional;
  * <p>Expected columns:
  * {@code date,home_team,away_team,home_score,away_score,tournament,city,country,neutral}
  *
- * <p>Rows with non-numeric scores (e.g. {@code NA} for fixtures not yet played)
- * are silently skipped — they are fixtures, not results.
+ * <p>Rows with numeric scores are completed matches ({@link Match}); rows with
+ * {@code NA} scores are scheduled fixtures ({@link Fixture}).
  */
 public final class MatchCsvParser {
 
     private static final int EXPECTED_COLUMNS = 9;
 
+    /** All completed matches; unplayed fixtures and malformed rows are skipped. */
     public List<Match> parse(Path csvFile) throws IOException {
         List<Match> matches = new ArrayList<>();
         try (BufferedReader reader = Files.newBufferedReader(csvFile)) {
@@ -39,6 +41,22 @@ public final class MatchCsvParser {
             }
         }
         return matches;
+    }
+
+    /** All scheduled-but-unplayed fixtures (rows with non-numeric scores). */
+    public List<Fixture> parseFixtures(Path csvFile) throws IOException {
+        List<Fixture> fixtures = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(csvFile)) {
+            String header = reader.readLine();
+            if (header == null) {
+                return fixtures;
+            }
+            String line;
+            while ((line = reader.readLine()) != null) {
+                parseFixtureLine(line).ifPresent(fixtures::add);
+            }
+        }
+        return fixtures;
     }
 
     /**
@@ -65,11 +83,39 @@ public final class MatchCsvParser {
         }
     }
 
+    /** Parses one CSV row into a {@link Fixture} if it is a valid unplayed match. */
+    static Optional<Fixture> parseFixtureLine(String line) {
+        List<String> fields = splitCsvLine(line);
+        if (fields.size() < EXPECTED_COLUMNS) {
+            return Optional.empty();
+        }
+        try {
+            LocalDate date = LocalDate.parse(fields.get(0));
+            if (isInteger(fields.get(3)) && isInteger(fields.get(4))) {
+                return Optional.empty(); // has a score, so it's a result not a fixture
+            }
+            return Optional.of(new Fixture(
+                    date, fields.get(1), fields.get(2), fields.get(5),
+                    Boolean.parseBoolean(fields.get(8))));
+        } catch (DateTimeParseException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     /**
      * Minimal quote-aware CSV field splitter. Handles fields like
      * {@code "Washington, D.C."} that contain commas inside double quotes.
      */
-    static List<String> splitCsvLine(String line) {
+    public static List<String> splitCsvLine(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inQuotes = false;

@@ -6,11 +6,16 @@ import com.david.worldcup.elo.BacktestResult;
 import com.david.worldcup.elo.EloConfig;
 import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.elo.Tuner;
+import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
+import com.david.worldcup.tracker.PredictionLedger;
+import com.david.worldcup.tracker.Tracker;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -20,10 +25,10 @@ import java.util.List;
  *
  * <ul>
  *   <li>{@code mvn compile exec:java} — replay history, print Elo top 15 + 2026 predictions</li>
- *   <li>{@code mvn compile exec:java -Dexec.args="--backtest"} — evaluate on 2018/2022,
- *       baseline vs goal-margin scaling</li>
- *   <li>{@code mvn compile exec:java -Dexec.args="--tune"} — hyperparameter grid search
- *       (tuned on 2018, validated once on 2022)</li>
+ *   <li>{@code -Dexec.args="--backtest"} — evaluate on 2018/2022, baseline vs margin scaling</li>
+ *   <li>{@code -Dexec.args="--tune"} — hyperparameter grid search (tuned 2018, validated 2022)</li>
+ *   <li>{@code -Dexec.args="--track"} — live tracker: lock predictions for upcoming World Cup
+ *       fixtures, score completed ones, update the README accuracy table</li>
  * </ul>
  */
 public final class Main {
@@ -43,6 +48,8 @@ public final class Main {
             runBacktests(matches);
         } else if (arguments.contains("--tune")) {
             runTuning(matches);
+        } else if (arguments.contains("--track")) {
+            runTracker(matches, csv);
         } else {
             runRankings(matches);
         }
@@ -122,6 +129,49 @@ public final class Main {
         System.out.println();
         System.out.println("Current EloConfig.DEFAULT on 2022 for comparison:");
         System.out.println("  " + tuner.validate(matches, EloConfig.DEFAULT).summary());
+    }
+
+    private static void runTracker(List<Match> matches, Path csv) throws IOException {
+        LocalDate today = LocalDate.now();
+        Path ledgerPath = Path.of("predictions/predictions.csv");
+        Path readmePath = Path.of("README.md");
+
+        // Train on everything that has been played.
+        EloRatingSystem elo = new EloRatingSystem();
+        matches.forEach(elo::processMatch);
+
+        // Lock predictions for upcoming World Cup fixtures not yet in the ledger.
+        List<Fixture> fixtures = new MatchCsvParser().parseFixtures(csv);
+        List<PredictionLedger.Prediction> ledger =
+                new ArrayList<>(PredictionLedger.load(ledgerPath));
+        List<PredictionLedger.Prediction> added =
+                Tracker.lockNewPredictions(elo, fixtures, ledger, today);
+        ledger.addAll(added);
+        ledger.sort(Comparator.comparing(PredictionLedger.Prediction::matchDate));
+        PredictionLedger.save(ledgerPath, ledger);
+
+        // Score everything in the ledger that now has a result.
+        List<Tracker.ScoredPrediction> scored = Tracker.score(ledger, matches);
+        List<PredictionLedger.Prediction> pending = new ArrayList<>(ledger);
+        scored.forEach(s -> pending.remove(s.prediction()));
+
+        // Rewrite the README tracker section.
+        String readme = Files.readString(readmePath);
+        String section = Tracker.renderMarkdown(scored, pending, today);
+        Files.writeString(readmePath, Tracker.replaceSection(readme, section));
+
+        System.out.printf("Locked %d new prediction(s); ledger holds %d.%n",
+                added.size(), ledger.size());
+        long correct = scored.stream().filter(Tracker.ScoredPrediction::correct).count();
+        if (!scored.isEmpty()) {
+            System.out.printf("Scored %d: %d correct (%.1f%%), Brier %.4f%n",
+                    scored.size(), correct, 100.0 * correct / scored.size(),
+                    scored.stream().mapToDouble(Tracker.ScoredPrediction::brier)
+                            .average().orElse(0));
+        } else {
+            System.out.println("No locked predictions resolved yet.");
+        }
+        System.out.println("README updated.");
     }
 
     private static void printPrediction(EloRatingSystem elo, String teamA, String teamB) {

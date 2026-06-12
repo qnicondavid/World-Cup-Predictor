@@ -1,5 +1,7 @@
 # World Cup Elo Predictor
 
+![CI](https://github.com/qnicondavid/World-Cup-Predictor/actions/workflows/ci.yml/badge.svg)
+
 An Elo-based prediction model for FIFA World Cup matches, trained on 150+ years
 of international football results (49,000+ matches, 1872–present). Built during
 the 2026 World Cup — predictions are scored against real results as the
@@ -55,14 +57,38 @@ predicts win/loss — explicit draw modelling is on the roadmap.
 - [x] **Phase 1b.1** — Backtest harness (accuracy + Brier score on 2018/2022)
 - [x] **Phase 1b.2** — Goal-margin K scaling + hyperparameter grid search
 - [ ] **Phase 1b.3** — Explicit draw modelling
-- [ ] **Phase 2** — Live 2026 tracker: GitHub Action fetches results, scores my
+- [x] **Phase 2** — Live 2026 tracker: GitHub Action fetches results, scores my
       predictions, auto-updates the accuracy table below
 - [ ] **Phase 3** — Monte Carlo simulation of the remaining bracket (10,000 runs)
 - [ ] **Phase 4** — Spring Boot REST API serving predictions
 
-## 2026 prediction accuracy
+## 2026 prediction accuracy (live)
 
-_Coming in Phase 2 — this table will update automatically after every matchday._
+A GitHub Action runs daily: it pulls fresh results, locks predictions for
+upcoming fixtures using current ratings, scores completed ones, and updates
+this section automatically.
+
+<!-- TRACKER:START -->
+_Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof._
+
+**No locked predictions have been resolved yet.**
+
+**Locked for upcoming matches:**
+
+| Date | Match | Pick | Confidence |
+|---|---|---|---|
+| Jun 12 | Canada vs Bosnia and Herzegovina | Canada | 84% |
+| Jun 12 | United States vs Paraguay | United States | 51% |
+| Jun 13 | Qatar vs Switzerland | Switzerland | 91% |
+| Jun 13 | Brazil vs Morocco | Brazil | 60% |
+| Jun 13 | Haiti vs Scotland | Scotland | 73% |
+| Jun 13 | Australia vs Turkey | Turkey | 62% |
+| Jun 14 | Germany vs Curaçao | Germany | 93% |
+| Jun 14 | Ivory Coast vs Ecuador | Ecuador | 74% |
+| Jun 14 | Netherlands vs Japan | Netherlands | 50% |
+| Jun 14 | Sweden vs Tunisia | Sweden | 57% |
+
+<!-- TRACKER:END -->
 
 ## Data
 
