@@ -25,9 +25,7 @@ import java.util.Map.Entry;
  * <p>All constants are configurable via {@link EloConfig} and were validated by
  * backtesting on the 2018/2022 World Cups (see {@link Backtest} and {@link Tuner}).
  *
- * <p>TODO(Phase 1b.3): model draws explicitly — expected score conflates
- * "win probability" with "win + half a draw". A simple approach: fit P(draw)
- * as a function of rating gap.
+ * <p>Draws are modelled explicitly via {@link DrawModel} (Phase 1b.3).
  */
 public final class EloRatingSystem {
 
@@ -36,6 +34,7 @@ public final class EloRatingSystem {
     private final EloConfig config;
     private final Map<String, Double> ratings = new HashMap<>();
     private int matchesProcessed = 0;
+    private int lastYearSeen = Integer.MIN_VALUE;
 
     public EloRatingSystem() {
         this(EloConfig.DEFAULT);
@@ -61,6 +60,8 @@ public final class EloRatingSystem {
 
     /** Updates both teams' ratings based on a completed match. */
     public void processMatch(Match match) {
+        applyAnnualRegression(match.date().getYear());
+
         double homeRating = ratingOf(match.homeTeam());
         double awayRating = ratingOf(match.awayTeam());
 
@@ -86,6 +87,21 @@ public final class EloRatingSystem {
     }
 
     /**
+     * Pulls every rating toward {@value #INITIAL_RATING} when the calendar year
+     * advances, by {@code annualRegression} per elapsed year. Squads change;
+     * results from long ago should count for less.
+     */
+    private void applyAnnualRegression(int year) {
+        if (lastYearSeen != Integer.MIN_VALUE
+                && year > lastYearSeen
+                && config.annualRegression() > 0) {
+            double keep = Math.pow(1.0 - config.annualRegression(), year - lastYearSeen);
+            ratings.replaceAll((team, r) -> INITIAL_RATING + (r - INITIAL_RATING) * keep);
+        }
+        lastYearSeen = Math.max(lastYearSeen, year);
+    }
+
+    /**
      * Goal-margin weight from eloratings.net: 1-goal wins and draws count
      * normally; bigger margins move ratings further.
      */
@@ -105,6 +121,18 @@ public final class EloRatingSystem {
         double home = ratingOf(homeTeam)
                 + (neutralVenue ? 0.0 : config.homeAdvantage());
         return expectedScore(home, ratingOf(awayTeam));
+    }
+
+    /**
+     * Explicit win/draw/loss probabilities for a matchup, using the empirical
+     * draw model (see {@link DrawModel}).
+     */
+    public DrawModel.Probabilities outcomeProbabilities(String homeTeam, String awayTeam,
+                                                        boolean neutralVenue) {
+        double home = ratingOf(homeTeam)
+                + (neutralVenue ? 0.0 : config.homeAdvantage());
+        double away = ratingOf(awayTeam);
+        return DrawModel.split(expectedScore(home, away), home - away);
     }
 
     /** Top {@code n} teams by current rating, strongest first. */

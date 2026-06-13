@@ -28,39 +28,63 @@ mvn test                            # run the unit test suite
 mvn compile exec:java               # replay history, print Elo top 15 + sample predictions
 mvn compile exec:java -Dexec.args="--backtest"   # evaluate on the 2018/2022 World Cups
 mvn compile exec:java -Dexec.args="--tune"       # hyperparameter grid search
+mvn compile exec:java -Dexec.args="--track"      # lock/score predictions, update README
+mvn compile exec:java -Dexec.args="--simulate"   # Monte Carlo: 10,000 tournament sims
+mvn compile exec:java -Dexec.args="--upcoming"   # every fixture with win/draw/loss probs
+mvn compile exec:java -Dexec.args="--predict=France,Argentina"   # any matchup
 ```
+
+(PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)
 
 ## Backtest results
 
-The model is scored on World Cups it has never seen: it trains on all matches
-before the tournament, then predicts each match *before* learning from its
-result — the same information regime as predicting in real time.
+The model is scored on five World Cups it has never seen: for each tournament it
+trains only on matches played before it, then predicts each match *before*
+learning its result — the same information regime as predicting in real time.
 
-| Tournament | Baseline | Tuned + margin scaling |
+| Tournament | Tuned model | Baseline |
 |---|---|---|
-| World Cup 2018 | 34/64 (53.1%), Brier 0.167 | 36/64 (56.3%), Brier 0.159 |
-| World Cup 2022 | 34/64 (53.1%), Brier 0.181 | 34/64 (53.1%), Brier 0.180 |
+| World Cup 2006 | 41/64 (64.1%), Brier 0.119 | 42/64 (65.6%), Brier 0.129 |
+| World Cup 2010 | 35/64 (54.7%), Brier 0.146 | 32/64 (50.0%), Brier 0.148 |
+| World Cup 2014 | 39/64 (60.9%), Brier 0.135 | 39/64 (60.9%), Brier 0.150 |
+| World Cup 2018 | 37/64 (57.8%), Brier 0.159 | 34/64 (53.1%), Brier 0.167 |
+| World Cup 2022 | 32/64 (50.0%), Brier 0.183 | 34/64 (53.1%), Brier 0.181 |
+| **Combined (320)** | **184/320 (57.5%), Brier 0.148** | 181/320 (56.6%), Brier 0.155 |
 | Coin-flip reference | 50%, Brier 0.250 | — |
 
-The tuned config (K_worldcup 40, home advantage 50, K_friendly 30, goal-margin
-scaling on) was selected by grid search on 2018 only, then validated once on
-held-out 2022 to avoid overfitting. Interesting findings: a *lower* home
-advantage and *higher* friendly weight than the eloratings.net folklore values,
-and goal-margin scaling helps on both tournaments.
+The tuned config (K_worldcup 60, home advantage 50, K_friendly 30, goal-margin
+scaling on) was selected by pooled grid search over 2006-2018, then validated
+once on held-out 2022. Findings worth noting:
 
-Draws (~20% of World Cup matches) always count as misses since the model only
-predicts win/loss — explicit draw modelling is on the roadmap.
+- **Goal-margin scaling helps consistently** (combined Brier 0.148 vs 0.155).
+- **Annual regression toward the mean never helped** at any strength tested —
+  national-team strength is more persistent than folklore suggests.
+- **World Cups are getting harder to predict**: Brier rises almost monotonically
+  from 0.119 (2006) to 0.183 (2022). The field has genuinely tightened.
 
-## Roadmap
+**Three-way scoring** (win/draw/loss via the draw model): multiclass Brier of
+0.50-0.62 across the five tournaments against 0.667 for uniform guessing. An
+honest finding: the model never makes "draw" its single most likely outcome
+(~30% is the ceiling), so three-way pick accuracy equals binary accuracy — the
+draw model improves *probabilities*, not *picks*. Bookmakers share this
+property: the draw is almost never the favorite.
 
-- [x] **Phase 1** — Data ingestion, Elo engine, unit tests
-- [x] **Phase 1b.1** — Backtest harness (accuracy + Brier score on 2018/2022)
-- [x] **Phase 1b.2** — Goal-margin K scaling + hyperparameter grid search
-- [ ] **Phase 1b.3** — Explicit draw modelling
-- [x] **Phase 2** — Live 2026 tracker: GitHub Action fetches results, scores my
-      predictions, auto-updates the accuracy table below
-- [ ] **Phase 3** — Monte Carlo simulation of the remaining bracket (10,000 runs)
-- [ ] **Phase 4** — Spring Boot REST API serving predictions
+## Draw modelling
+
+The Elo expected score conflates winning and drawing (E = P(win) + P(draw)/2).
+To split it, P(draw) is estimated empirically: replaying 37,314 internationals
+since 1980 through the model shows the draw rate falling from ~30% between
+equal teams to ~2% at a 600-point rating gap. `DrawModel` interpolates that
+observed curve and splits E into explicit win/draw/loss probabilities.
+
+## Tournament simulation
+
+`--simulate` runs 10,000 Monte Carlo tournaments: replays the real group
+results so far, samples every remaining fixture from the model's win/draw/loss
+probabilities, resolves groups (winners, runners-up, best thirds), then samples
+the knockout bracket to a champion. Documented simplifications: Elo tie-breaks
+instead of goal difference, seeded knockout pairings, and knockout draws folded
+into the win probability.
 
 ## 2026 prediction accuracy (live)
 
@@ -93,4 +117,4 @@ _Updated 2026-06-13 — predictions are locked before kickoff and never edited; 
 ## Data
 
 Match data from [martj42/international_results](https://github.com/martj42/international_results)
-(includes scheduled 2026 fixtures, used as the prediction list in Phase 2).
+(includes scheduled 2026 fixtures, used as the prediction list in 

@@ -112,7 +112,7 @@ class EloRatingSystemTest {
 
     @Test
     void biggerWinsMoveRatingsFurtherWhenMarginScalingIsOn() {
-        EloConfig margin = new EloConfig(60, 40, 35, 20, 100, true);
+        EloConfig margin = new EloConfig(60, 40, 35, 20, 100, true, 0.0);
 
         EloRatingSystem narrow = new EloRatingSystem(margin);
         narrow.processMatch(match("A", "B", 1, 0, "FIFA World Cup"));
@@ -126,8 +126,36 @@ class EloRatingSystemTest {
     @Test
     void homeAdvantageIsConfigurable() {
         EloRatingSystem noHomeEdge = new EloRatingSystem(
-                new EloConfig(60, 40, 35, 20, 0, false));
+                new EloConfig(60, 40, 35, 20, 0, false, 0.0));
         assertEquals(0.5, noHomeEdge.winProbability("A", "B", false), EPSILON);
+    }
+
+    @Test
+    void annualRegressionPullsRatingsTowardTheMean() {
+        EloConfig config = new EloConfig(60, 40, 35, 20, 0, false, 0.5);
+        EloRatingSystem elo = new EloRatingSystem(config);
+
+        elo.processMatch(new Match(LocalDate.of(2020, 6, 1), "A", "B",
+                1, 0, "FIFA World Cup", true));
+        double gain = elo.ratingOf("A") - EloRatingSystem.INITIAL_RATING;
+
+        // A year passes: the next processed match triggers 50% regression.
+        elo.processMatch(new Match(LocalDate.of(2021, 6, 1), "C", "D",
+                1, 0, "FIFA World Cup", true));
+
+        assertEquals(EloRatingSystem.INITIAL_RATING + gain * 0.5,
+                elo.ratingOf("A"), EPSILON);
+    }
+
+    @Test
+    void zeroRegressionLeavesRatingsUntouchedAcrossYears() {
+        EloRatingSystem elo = new EloRatingSystem(EloConfig.BASELINE);
+        elo.processMatch(new Match(LocalDate.of(2020, 6, 1), "A", "B",
+                1, 0, "FIFA World Cup", true));
+        double after2020 = elo.ratingOf("A");
+        elo.processMatch(new Match(LocalDate.of(2023, 6, 1), "C", "D",
+                1, 0, "FIFA World Cup", true));
+        assertEquals(after2020, elo.ratingOf("A"), EPSILON);
     }
 
     @Test

@@ -6,8 +6,10 @@ import com.david.worldcup.elo.BacktestResult;
 import com.david.worldcup.elo.EloConfig;
 import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.elo.Tuner;
+import com.david.worldcup.elo.DrawModel;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
+import com.david.worldcup.sim.TournamentSimulator;
 import com.david.worldcup.tracker.PredictionLedger;
 import com.david.worldcup.tracker.Tracker;
 
@@ -50,6 +52,12 @@ public final class Main {
             runTuning(matches);
         } else if (arguments.contains("--track")) {
             runTracker(matches, csv);
+        } else if (arguments.contains("--simulate")) {
+            runSimulation(matches, csv);
+        } else if (arguments.contains("--upcoming")) {
+            runUpcoming(matches, csv);
+        } else if (arguments.stream().anyMatch(a -> a.startsWith("--predict="))) {
+            runPredict(matches, arguments);
         } else {
             runRankings(matches);
         }
@@ -83,42 +91,50 @@ public final class Main {
         System.out.println();
         Backtest backtest = new Backtest();
 
-        printBacktest(backtest, matches, "Baseline (no margin scaling)", EloConfig.BASELINE);
+        System.out.printf("%-16s | %-38s | %s%n", "Tournament", "Tuned model", "Baseline");
+        for (Backtest.Window w : Backtest.WORLD_CUPS) {
+            BacktestResult tuned = backtest.run(matches, w.from(), w.until(), EloConfig.DEFAULT);
+            BacktestResult base = backtest.run(matches, w.from(), w.until(), EloConfig.BASELINE);
+            System.out.printf("%-16s | %-38s | %s%n", w.label(), tuned.summary(), base.summary());
+        }
+        BacktestResult combinedTuned =
+                backtest.runCombined(matches, Backtest.WORLD_CUPS, EloConfig.DEFAULT);
+        BacktestResult combinedBase =
+                backtest.runCombined(matches, Backtest.WORLD_CUPS, EloConfig.BASELINE);
+        System.out.printf("%-16s | %-38s | %s%n", "Combined", combinedTuned.summary(),
+                combinedBase.summary());
+
         System.out.println();
-        printBacktest(backtest, matches, "With goal-margin K scaling", EloConfig.DEFAULT);
+        System.out.println("--- Three-way (win/draw/loss) with the draw model, tuned config ---");
+        for (Backtest.Window w : Backtest.WORLD_CUPS) {
+            System.out.println(w.label() + ": "
+                    + backtest.runThreeWay(matches, w.from(), w.until(), EloConfig.DEFAULT)
+                            .summary());
+        }
+        System.out.println("Reference: predicting uniform thirds = multiclass Brier 0.667.");
 
         System.out.println();
         System.out.println("Reference points: coin flip = 50% accuracy, Brier 0.25.");
-        System.out.println("Draws always count as misses, so accuracy is understated.");
-    }
-
-    private static void printBacktest(Backtest backtest, List<Match> matches,
-                                      String label, EloConfig config) {
-        BacktestResult wc2018 = backtest.run(matches,
-                LocalDate.of(2018, 6, 1), LocalDate.of(2018, 7, 31), config);
-        BacktestResult wc2022 = backtest.run(matches,
-                LocalDate.of(2022, 11, 1), LocalDate.of(2022, 12, 31), config);
-        System.out.println("--- " + label + " ---");
-        System.out.println("World Cup 2018: " + wc2018.summary());
-        System.out.println("World Cup 2022: " + wc2022.summary());
+        System.out.println("Draws always count as misses in the binary rows, so accuracy is understated.");
     }
 
     private static void runTuning(List<Match> matches) {
         System.out.println("=== Hyperparameter grid search ===");
-        System.out.println("Tuning metric: Brier score on World Cup 2018 (lower is better).");
+        System.out.println("Tuning metric: pooled Brier over WC 2006-2018 (256 matches).");
         System.out.println("World Cup 2022 is held out for final validation.");
         System.out.println();
 
         Tuner tuner = new Tuner();
         List<Tuner.Candidate> candidates = tuner.search(matches);
 
-        System.out.printf("%-9s %-9s %-10s %-7s | %s%n",
-                "kWC", "homeAdv", "kFriendly", "margin", "2018 tuning result");
-        for (Tuner.Candidate c : candidates.subList(0, 5)) {
+        System.out.printf("%-7s %-9s %-10s %-7s %-7s | %s%n",
+                "kWC", "homeAdv", "kFriendly", "margin", "regr", "pooled 2006-2018 result");
+        for (Tuner.Candidate c : candidates.subList(0, 8)) {
             EloConfig cfg = c.config();
-            System.out.printf("%-9.0f %-9.0f %-10.0f %-7s | %s%n",
+            System.out.printf("%-7.0f %-9.0f %-10.0f %-7s %-7.2f | %s%n",
                     cfg.kWorldCup(), cfg.homeAdvantage(), cfg.kFriendly(),
                     cfg.goalMarginScaling() ? "on" : "off",
+                    cfg.annualRegression(),
                     c.tuningResult().summary());
         }
 
@@ -172,6 +188,91 @@ public final class Main {
             System.out.println("No locked predictions resolved yet.");
         }
         System.out.println("README updated.");
+    }
+
+    private static void runSimulation(List<Match> matches, Path csv) throws IOException {
+        EloRatingSystem elo = new EloRatingSystem();
+        matches.forEach(elo::processMatch);
+
+        List<Match> playedGroup = matches.stream()
+                .filter(Match::isWorldCupFinals)
+                .filter(m -> m.date().getYear() == 2026)
+                .toList();
+        List<Fixture> remaining = new MatchCsvParser().parseFixtures(csv).stream()
+                .filter(Fixture::isWorldCupFinals)
+                .toList();
+
+        int runs = 10_000;
+        TournamentSimulator simulator = new TournamentSimulator(elo);
+        List<TournamentSimulator.TeamOdds> odds =
+                simulator.simulate(playedGroup, remaining, runs, 2026L);
+
+        System.out.printf("=== Monte Carlo: %,d simulations of the remaining tournament ===%n", runs);
+        System.out.printf("Group results so far: %d played, %d fixtures remaining.%n%n",
+                playedGroup.size(), remaining.size());
+        System.out.printf("%4s %-22s %7s %7s %7s%n", "", "Team", "Title", "Final", "Semis");
+        int rank = 1;
+        for (TournamentSimulator.TeamOdds o : odds.subList(0, Math.min(15, odds.size()))) {
+            System.out.printf("%3d. %-22s %6.1f%% %6.1f%% %6.1f%%%n",
+                    rank++, o.team(),
+                    100 * o.titleShare(), 100 * o.finalShare(), 100 * o.semiShare());
+        }
+        System.out.println();
+        System.out.println("Simplifications: Elo tie-breaks instead of goal difference; seeded");
+        System.out.println("knockout pairings; knockout draws folded into the win probability.");
+    }
+
+    private static void runUpcoming(List<Match> matches, Path csv) throws IOException {
+        EloRatingSystem elo = new EloRatingSystem();
+        matches.forEach(elo::processMatch);
+
+        List<Fixture> upcoming = new MatchCsvParser().parseFixtures(csv).stream()
+                .filter(Fixture::isWorldCupFinals)
+                .sorted(Comparator.comparing(Fixture::date))
+                .toList();
+
+        System.out.printf("=== Upcoming World Cup fixtures: model view (%d matches) ===%n%n",
+                upcoming.size());
+        System.out.printf("%-10s %-44s %5s %6s %5s%n", "Date", "Match (with current Elo)",
+                "Win", "Draw", "Loss");
+        for (Fixture f : upcoming) {
+            DrawModel.Probabilities p =
+                    elo.outcomeProbabilities(f.homeTeam(), f.awayTeam(), f.neutralVenue());
+            String label = String.format("%s (%.0f) vs %s (%.0f)%s",
+                    f.homeTeam(), elo.ratingOf(f.homeTeam()),
+                    f.awayTeam(), elo.ratingOf(f.awayTeam()),
+                    f.neutralVenue() ? "" : " [home]");
+            System.out.printf("%-10s %-44s %4.0f%% %5.0f%% %4.0f%%%n",
+                    f.date(), label,
+                    100 * p.homeWin(), 100 * p.draw(), 100 * p.awayWin());
+        }
+    }
+
+    /** Usage: {@code --predict=TeamA,TeamB} (add {@code ,home} if TeamA hosts). */
+    private static void runPredict(List<Match> matches, List<String> arguments) {
+        String spec = arguments.stream()
+                .filter(a -> a.startsWith("--predict="))
+                .findFirst().orElseThrow()
+                .substring("--predict=".length());
+        String[] parts = spec.split(",");
+        if (parts.length < 2) {
+            System.out.println("Usage: --predict=TeamA,TeamB[,home]");
+            return;
+        }
+        String home = parts[0].trim();
+        String away = parts[1].trim();
+        boolean neutral = parts.length < 3 || !parts[2].trim().equalsIgnoreCase("home");
+
+        EloRatingSystem elo = new EloRatingSystem();
+        matches.forEach(elo::processMatch);
+
+        DrawModel.Probabilities p = elo.outcomeProbabilities(home, away, neutral);
+        System.out.printf("%s (Elo %.0f) vs %s (Elo %.0f)%s%n",
+                home, elo.ratingOf(home), away, elo.ratingOf(away),
+                neutral ? " — neutral venue" : " — " + home + " at home");
+        System.out.printf("  %s win: %.1f%%%n", home, 100 * p.homeWin());
+        System.out.printf("  Draw:   %.1f%%%n", 100 * p.draw());
+        System.out.printf("  %s win: %.1f%%%n", away, 100 * p.awayWin());
     }
 
     private static void printPrediction(EloRatingSystem elo, String teamA, String teamB) {
