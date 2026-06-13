@@ -2,10 +2,15 @@
 
 ![CI](https://github.com/qnicondavid/World-Cup-Predictor/actions/workflows/ci.yml/badge.svg)
 
-An Elo-based prediction model for FIFA World Cup matches, trained on 150+ years
-of international football results (49,000+ matches, 1872–present). Built during
-the 2026 World Cup — predictions are scored against real results as the
-tournament unfolds.
+**▶ Live demo: [qnicondavid.github.io/World-Cup-Predictor](https://qnicondavid.github.io/World-Cup-Predictor/)** —
+daily-updated 2026 predictions, scored record, and Monte Carlo championship odds.
+
+A prediction model for FIFA World Cup matches, trained on 150+ years of
+international football results (49,000+ matches, 1872–present). It began as an
+Elo rating system and now serves predictions from a **Dixon-Coles goal model**
+with a squad market-value prior; everything is evaluated on held-out World Cups
+and the live 2026 predictions are scored against real results as the tournament
+unfolds.
 
 ## 2026 prediction accuracy (live)
 
