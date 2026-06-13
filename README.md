@@ -42,6 +42,23 @@ _Updated 2026-06-13 — predictions are locked before kickoff and never edited; 
 
 <!-- TRACKER:END -->
 
+### Before the model existed (retrospective)
+
+The 2026 World Cup had already kicked off when this model was built. These early
+matches were never locked, so they are shown separately and excluded from the
+record above — each is a retrospective prediction trained only on data from
+before that match.
+
+<!-- EARLY:START -->
+_These were played **before the model existed**, so they were never locked. Each row is a *retrospective* prediction, computed by training only on data from before that match — never peeking at the result — and is **not counted** in the record above. Shown for a complete tournament picture._
+
+| Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |
+|---|---|---|---|---|---|---|---|
+| Jun 11 | Mexico vs South Africa | Mexico | 64/24/13% | 1-0 (1.7–0.6) | 2-0 | 1 | ✅ |
+| Jun 11 | South Korea vs Czech Republic | South Korea | 42/28/30% | 1-1 (1.4–1.1) | 2-1 | 1 | ✅ |
+
+<!-- EARLY:END -->
+
 ### Championship odds (live)
 
 The model's title picks from 10,000 Monte Carlo simulations of the rest of the

@@ -140,4 +140,26 @@ class TrackerTest {
         assertEquals("Canada", p.pick());
         Files.deleteIfExists(tmp);
     }
+
+    @Test
+    void earlyMatchesRenderRetrospectivelyAndAreExcluded() {
+        List<Prediction> preds = List.of(new Prediction(
+                LocalDate.of(2026, 6, 11), "X", "Y", true,
+                0.60, 0.25, 0.15, 1.8, 0.9, LocalDate.of(2026, 6, 11)));
+        List<Match> results = List.of(
+                new Match(LocalDate.of(2026, 6, 11), "X", "Y", 2, 0, "FIFA World Cup", true));
+
+        String md = Tracker.renderEarlyMatches(Tracker.score(preds, results), TODAY);
+
+        assertTrue(md.contains("retrospective"));
+        assertTrue(md.contains("not counted"));
+        assertTrue(md.contains("X vs Y"));
+        assertTrue(md.contains("2-0")); // actual result shown
+    }
+
+    @Test
+    void earlyMatchesTableIsEmptyWhenNoneprecedeTheModel() {
+        assertTrue(Tracker.renderEarlyMatches(List.of(), TODAY)
+                .contains("No World Cup matches were played before"));
+    }
 }

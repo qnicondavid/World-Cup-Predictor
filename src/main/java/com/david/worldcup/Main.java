@@ -12,6 +12,7 @@ import com.david.worldcup.goals.DixonColesModel;
 import com.david.worldcup.goals.EloDrawBaselineModel;
 import com.david.worldcup.goals.EloPoissonModel;
 import com.david.worldcup.goals.EnsembleModel;
+import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.GoalModelBacktest;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
@@ -287,6 +288,35 @@ public final class Main {
         readme = Tracker.replaceSection(readme,
                 Tracker.TITLE_SECTION_START, Tracker.TITLE_SECTION_END,
                 Tracker.renderTitleOdds(odds, 16, today, runs));
+
+        // Retrospective view of World Cup matches played before the model was created.
+        LocalDate modelBirth = ledger.stream()
+                .map(PredictionLedger.Prediction::lockedOn)
+                .min(Comparator.naturalOrder())
+                .orElse(today);
+        List<Match> earlyMatches = matches.stream()
+                .filter(Match::isWorldCupFinals)
+                .filter(mt -> mt.date().getYear() == 2026)
+                .filter(mt -> mt.date().isBefore(modelBirth))
+                .sorted(Comparator.comparing(Match::date))
+                .toList();
+        List<PredictionLedger.Prediction> earlyPredictions = new ArrayList<>();
+        for (Match mt : earlyMatches) {
+            List<Match> before = matches.stream().filter(x -> x.date().isBefore(mt.date())).toList();
+            DixonColesModel retro = DixonColesModel.fit(before, mt.date());
+            DrawModel.Probabilities pr =
+                    retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
+            var goals = retro.expectedGoals(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
+            earlyPredictions.add(new PredictionLedger.Prediction(
+                    mt.date(), mt.homeTeam(), mt.awayTeam(), mt.neutralVenue(),
+                    pr.homeWin(), pr.draw(), pr.awayWin(),
+                    goals.map(GoalModel.GoalRates::home).orElse(Double.NaN),
+                    goals.map(GoalModel.GoalRates::away).orElse(Double.NaN),
+                    mt.date()));
+        }
+        readme = Tracker.replaceSection(readme,
+                Tracker.EARLY_SECTION_START, Tracker.EARLY_SECTION_END,
+                Tracker.renderEarlyMatches(Tracker.score(earlyPredictions, matches), today));
 
         Files.writeString(readmePath, readme);
 

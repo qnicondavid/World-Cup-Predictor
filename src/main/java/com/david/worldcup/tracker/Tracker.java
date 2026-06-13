@@ -35,6 +35,12 @@ public final class Tracker {
     public static final String SECTION_END = "<!-- TRACKER:END -->";
     public static final String TITLE_SECTION_START = "<!-- TITLE:START -->";
     public static final String TITLE_SECTION_END = "<!-- TITLE:END -->";
+    public static final String EARLY_SECTION_START = "<!-- EARLY:START -->";
+    public static final String EARLY_SECTION_END = "<!-- EARLY:END -->";
+
+    private static final String RESOLVED_HEADER =
+            "| Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |\n"
+                    + "|---|---|---|---|---|---|---|---|\n";
 
     private static final DateTimeFormatter DAY =
             DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
@@ -140,22 +146,11 @@ public final class Tracker {
                             + "mean goal error %.1f** (uniform guess = 0.667)%n%n",
                     correct, scored.size(), 100.0 * correct / scored.size(), brier, meanGoalError));
 
-            md.append("| Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |\n");
-            md.append("|---|---|---|---|---|---|---|---|\n");
+            md.append(RESOLVED_HEADER);
             List<ScoredPrediction> recent =
                     scored.subList(Math.max(0, scored.size() - 15), scored.size());
             for (ScoredPrediction s : recent) {
-                Prediction p = s.prediction();
-                Match r = s.result();
-                ScorePredictor.PredictedScore ps = predictedScore(p);
-                int err = ps.goalError(r.homeScore(), r.awayScore());
-                String delta = err + (ps.exact(r.homeScore(), r.awayScore()) ? " 🎯" : "");
-                md.append(String.format(Locale.ROOT,
-                        "| %s | %s vs %s | %s | %s | %s | %d-%d | %s | %s |%n",
-                        DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
-                        p.pick(), splitLabel(p), scoreLabel(ps),
-                        r.homeScore(), r.awayScore(),
-                        delta, s.correct() ? "✅" : "❌"));
+                appendResolvedRow(md, s);
             }
         }
 
@@ -170,6 +165,43 @@ public final class Tracker {
                             "| %s | %s vs %s | %s | %s | %s |%n",
                             DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
                             p.pick(), splitLabel(p), scoreLabel(predictedScore(p)))));
+        }
+        return md.toString();
+    }
+
+    /** One row of the resolved/retrospective table (shared so both render identically). */
+    private static void appendResolvedRow(StringBuilder md, ScoredPrediction s) {
+        Prediction p = s.prediction();
+        Match r = s.result();
+        ScorePredictor.PredictedScore ps = predictedScore(p);
+        int err = ps.goalError(r.homeScore(), r.awayScore());
+        String delta = err + (ps.exact(r.homeScore(), r.awayScore()) ? " 🎯" : "");
+        md.append(String.format(Locale.ROOT,
+                "| %s | %s vs %s | %s | %s | %s | %d-%d | %s | %s |%n",
+                DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
+                p.pick(), splitLabel(p), scoreLabel(ps),
+                r.homeScore(), r.awayScore(),
+                delta, s.correct() ? "✅" : "❌"));
+    }
+
+    /**
+     * Renders matches played before the model existed, in the same format as the
+     * locked table. These are retrospective (trained only on data before each
+     * match) and explicitly excluded from the record.
+     */
+    public static String renderEarlyMatches(List<ScoredPrediction> early, LocalDate today) {
+        StringBuilder md = new StringBuilder();
+        if (early.isEmpty()) {
+            md.append("_No World Cup matches were played before the model was created._\n");
+            return md.toString();
+        }
+        md.append("_These were played **before the model existed**, so they were never locked. ")
+          .append("Each row is a *retrospective* prediction, computed by training only on data ")
+          .append("from before that match — never peeking at the result — and is **not counted** ")
+          .append("in the record above. Shown for a complete tournament picture._\n\n");
+        md.append(RESOLVED_HEADER);
+        for (ScoredPrediction s : early) {
+            appendResolvedRow(md, s);
         }
         return md.toString();
     }
