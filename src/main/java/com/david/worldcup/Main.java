@@ -15,6 +15,7 @@ import com.david.worldcup.goals.EnsembleModel;
 import com.david.worldcup.goals.GoalModelBacktest;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
+import com.david.worldcup.rest.RestBacktest;
 import com.david.worldcup.sim.TournamentSimulator;
 import com.david.worldcup.tracker.PredictionLedger;
 import com.david.worldcup.tracker.Tracker;
@@ -65,6 +66,8 @@ public final class Main {
             runUpcoming(matches, csv);
         } else if (arguments.contains("--goals")) {
             runGoalComparison(matches);
+        } else if (arguments.contains("--rest")) {
+            runRest(matches);
         } else if (arguments.stream().anyMatch(a -> a.startsWith("--predict="))) {
             runPredict(matches, arguments);
         } else {
@@ -164,6 +167,49 @@ public final class Main {
 
         System.out.println();
         System.out.println("Reference: uniform thirds = multiclass Brier 0.667.");
+    }
+
+    private static void runRest(List<Match> matches) {
+        System.out.println("=== Rest-days differential: does extra recovery beat the plain rating? ===");
+        System.out.println("Adds rating points per day of rest advantage; 0 = Elo + DrawModel baseline.");
+        System.out.println();
+
+        RestBacktest bt = new RestBacktest();
+        double[] coeffs = {0, 5, 10, 15, 20, 30};
+
+        System.out.printf("%-9s | %s%n", "pts/day", "pooled WC 2006-2018 (three-way)");
+        double bestCoeff = 0;
+        double bestBrier = Double.MAX_VALUE;
+        for (double c : coeffs) {
+            int evaluated = 0;
+            int correct = 0;
+            double brierSum = 0.0;
+            for (Backtest.Window w : Backtest.TUNING_WINDOWS) {
+                RestBacktest.Result r = bt.run(matches, w.from(), w.until(), c);
+                evaluated += r.evaluated();
+                correct += r.correct();
+                brierSum += r.multiclassBrier() * r.evaluated();
+            }
+            double brier = evaluated == 0 ? 0.0 : brierSum / evaluated;
+            System.out.printf(Locale.ROOT, "%-9.0f | %d/%d correct, Brier %.4f%n",
+                    c, correct, evaluated, brier);
+            if (brier < bestBrier) {
+                bestBrier = brier;
+                bestCoeff = c;
+            }
+        }
+
+        Backtest.Window validation = Backtest.WORLD_CUPS.get(4); // 2022, held out
+        RestBacktest.Result base = bt.run(matches, validation.from(), validation.until(), 0);
+        RestBacktest.Result tuned = bt.run(matches, validation.from(), validation.until(), bestCoeff);
+        System.out.println();
+        System.out.printf(Locale.ROOT,
+                "Best on tuning: %.0f points per rest-day. Held-out World Cup 2022:%n", bestCoeff);
+        System.out.println("  baseline (0):       " + base.summary());
+        System.out.printf(Locale.ROOT, "  rest-adjusted (%.0f): %s%n", bestCoeff, tuned.summary());
+        if (bestCoeff == 0) {
+            System.out.println("Verdict: rest differential did not improve on the baseline.");
+        }
     }
 
     private static void runTuning(List<Match> matches) {

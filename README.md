@@ -95,6 +95,7 @@ mvn compile exec:java -Dexec.args="--simulate"   # Monte Carlo: 10,000 tournamen
 mvn compile exec:java -Dexec.args="--upcoming"   # every fixture with win/draw/loss probs
 mvn compile exec:java -Dexec.args="--predict=France,Argentina"   # any matchup
 mvn compile exec:java -Dexec.args="--goals"      # goal models vs Elo: held-out comparison
+mvn compile exec:java -Dexec.args="--rest"       # does a rest-days edge improve the model?
 ```
 
 (PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)
@@ -207,6 +208,19 @@ on held-out Brier, the betting layer is a small add-on: convert odds to implied
 probabilities (remove the overround), bet when the model's probability exceeds
 the implied one by a margin, and size with fractional Kelly. That step needs a
 historical-odds feed, which the current dataset does not include.
+
+## Rest-days differential (experimental)
+
+A team that comes into a match with more recovery than its opponent should have
+a small edge the rating alone misses. `--rest` tests exactly that: replaying in
+date order, it tracks each team's previous match and adds rating points per day
+of rest advantage (capped at 10 days, so a long pre-tournament break is not
+mistaken for a huge edge), then measures held-out multiclass Brier against the
+unadjusted baseline — fitting the points-per-day on 2006-2018 and validating on
+2022. It needs no new data (match dates are already in `results.csv`), so it is
+fully reproducible. Run `--rest` to see whether the effect survives out of
+sample; within a World Cup the schedule is fairly even, so expect the signal to
+be modest.
 
 ## Data
 
