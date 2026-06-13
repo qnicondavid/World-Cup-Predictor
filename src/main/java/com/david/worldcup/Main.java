@@ -219,10 +219,26 @@ public final class Main {
         List<PredictionLedger.Prediction> pending = new ArrayList<>(ledger);
         scored.forEach(s -> pending.remove(s.prediction()));
 
-        // Rewrite the README tracker section.
+        // Rewrite the README prediction-accuracy section.
         String readme = Files.readString(readmePath);
-        String section = Tracker.renderMarkdown(scored, pending, today);
-        Files.writeString(readmePath, Tracker.replaceSection(readme, section));
+        readme = Tracker.replaceSection(readme, Tracker.renderMarkdown(scored, pending, today));
+
+        // Rewrite the live championship-odds section from a fresh simulation.
+        List<Match> played2026 = matches.stream()
+                .filter(Match::isWorldCupFinals)
+                .filter(mt -> mt.date().getYear() == 2026)
+                .toList();
+        List<Fixture> remainingWorldCup = fixtures.stream()
+                .filter(Fixture::isWorldCupFinals)
+                .toList();
+        int runs = 10_000;
+        List<TournamentSimulator.TeamOdds> odds =
+                new TournamentSimulator(elo).simulate(played2026, remainingWorldCup, runs, 2026L);
+        readme = Tracker.replaceSection(readme,
+                Tracker.TITLE_SECTION_START, Tracker.TITLE_SECTION_END,
+                Tracker.renderTitleOdds(odds, 16, today, runs));
+
+        Files.writeString(readmePath, readme);
 
         System.out.printf("Locked %d new prediction(s); ledger holds %d.%n",
                 added.size(), ledger.size());

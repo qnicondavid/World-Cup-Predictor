@@ -36,6 +36,18 @@ public final class ScoreGrid {
         return p;
     }
 
+    /** Most likely goal count for a Poisson rate (the distribution's mode). */
+    public static int mode(double lambda) {
+        double[] p = poissonPmf(lambda);
+        int best = 0;
+        for (int k = 1; k <= MAX_GOALS; k++) {
+            if (p[k] > p[best]) {
+                best = k;
+            }
+        }
+        return best;
+    }
+
     /** Collapses a scoreline grid into normalised home-win / draw / away-win probabilities. */
     static DrawModel.Probabilities wdl(double[][] grid) {
         double home = 0, draw = 0, away = 0;
