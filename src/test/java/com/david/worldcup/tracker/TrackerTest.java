@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrackerTest {
@@ -35,26 +36,47 @@ class TrackerTest {
 
         assertEquals(1, added.size());
         assertEquals("C", added.get(0).homeTeam());
+        // Every locked prediction carries a normalised three-way split.
+        Prediction c = added.get(0);
+        assertEquals(1.0, c.pHome() + c.pDraw() + c.pAway(), EPSILON);
     }
 
     @Test
-    void scoresCorrectAndIncorrectPredictions() {
+    void scoresPicksAndMulticlassBrier() {
         List<Prediction> ledger = List.of(
-                new Prediction(TODAY, "A", "B", true, 0.8, TODAY.minusDays(1)),
-                new Prediction(TODAY, "C", "D", true, 0.3, TODAY.minusDays(1)),
-                new Prediction(TODAY.plusDays(5), "E", "F", true, 0.6, TODAY)); // unplayed
+                // pick = home (0.8 is the max); home wins -> correct
+                new Prediction(TODAY, "A", "B", true, 0.8, 0.1, 0.1, TODAY.minusDays(1)),
+                // pick = away (0.7 is the max); home wins -> incorrect
+                new Prediction(TODAY, "C", "D", true, 0.2, 0.1, 0.7, TODAY.minusDays(1)),
+                // unplayed -> not scored
+                new Prediction(TODAY.plusDays(5), "E", "F", true, 0.6, 0.2, 0.2, TODAY));
 
         List<Match> results = List.of(
-                new Match(TODAY, "A", "B", 2, 0, "FIFA World Cup", true),  // favorite won
-                new Match(TODAY, "C", "D", 1, 0, "FIFA World Cup", true)); // favorite (D) lost
+                new Match(TODAY, "A", "B", 2, 0, "FIFA World Cup", true),  // HOME_WIN
+                new Match(TODAY, "C", "D", 1, 0, "FIFA World Cup", true)); // HOME_WIN
 
         List<Tracker.ScoredPrediction> scored = Tracker.score(ledger, results);
 
         assertEquals(2, scored.size()); // unplayed match not scored
         assertTrue(scored.get(0).correct());
-        assertTrue(!scored.get(1).correct());
-        assertEquals(0.04, scored.get(0).brier(), EPSILON); // (0.8 - 1.0)^2
-        assertEquals(0.49, scored.get(1).brier(), EPSILON); // (0.3 - 1.0)^2
+        assertFalse(scored.get(1).correct());
+        // multiclass Brier = (pHome-1)^2 + (pDraw-0)^2 + (pAway-0)^2
+        assertEquals(0.06, scored.get(0).brier(), EPSILON); // .04 + .01 + .01
+        assertEquals(1.14, scored.get(1).brier(), EPSILON); // .64 + .01 + .49
+    }
+
+    @Test
+    void aDrawCanBeAcorrectPickWhenItIsTheMostLikelyOutcome() {
+        List<Prediction> ledger = List.of(
+                new Prediction(TODAY, "X", "Y", true, 0.30, 0.40, 0.30, TODAY.minusDays(1)));
+        List<Match> results = List.of(
+                new Match(TODAY, "X", "Y", 1, 1, "FIFA World Cup", true)); // DRAW
+
+        Tracker.ScoredPrediction s = Tracker.score(ledger, results).get(0);
+
+        assertEquals("Draw", s.prediction().pick());
+        assertTrue(s.correct());
+        assertEquals(0.54, s.brier(), EPSILON); // .09 + .36 + .09
     }
 
     @Test
@@ -63,7 +85,7 @@ class TrackerTest {
                 + Tracker.SECTION_END + "\nfooter";
         String updated = Tracker.replaceSection(readme, "new content");
         assertTrue(updated.contains("new content"));
-        assertTrue(!updated.contains("old"));
+        assertFalse(updated.contains("old"));
         assertTrue(updated.contains("footer"));
     }
 
@@ -77,11 +99,30 @@ class TrackerTest {
     @Test
     void ledgerRoundTripsThroughCsv() throws Exception {
         Path tmp = Files.createTempFile("ledger", ".csv");
+        // Values already at the 4-decimal precision the CSV stores, so the round trip is exact.
         List<Prediction> original = List.of(
-                new Prediction(TODAY, "Brazil", "Morocco", true, 0.6038, TODAY));
+                new Prediction(TODAY, "Brazil", "Morocco", true, 0.5038, 0.2461, 0.2501, TODAY));
         PredictionLedger.save(tmp, original);
         List<Prediction> loaded = PredictionLedger.load(tmp);
         assertEquals(original, loaded);
+        Files.deleteIfExists(tmp);
+    }
+
+    @Test
+    void legacyBinaryRowsExpandToANormalisedSplit() throws Exception {
+        Path tmp = Files.createTempFile("legacy", ".csv");
+        Files.writeString(tmp,
+                "match_date,home_team,away_team,neutral,p_home,locked_on\n"
+                        + "2026-06-12,Canada,Bosnia and Herzegovina,false,0.8429,2026-06-12\n");
+
+        List<Prediction> loaded = PredictionLedger.load(tmp);
+
+        assertEquals(1, loaded.size());
+        Prediction p = loaded.get(0);
+        assertEquals(1.0, p.pHome() + p.pDraw() + p.pAway(), EPSILON);
+        // The original Elo expected score is preserved: E = P(win) + P(draw)/2.
+        assertEquals(0.8429, p.pHome() + p.pDraw() / 2.0, EPSILON);
+        assertEquals("Canada", p.pick());
         Files.deleteIfExists(tmp);
     }
 }

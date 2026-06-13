@@ -1,5 +1,6 @@
 package com.david.worldcup.tracker;
 
+import com.david.worldcup.elo.DrawModel;
 import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
@@ -19,6 +20,11 @@ import java.util.Set;
 /**
  * The live 2026 tracker: locks predictions for upcoming World Cup fixtures and
  * scores previously locked predictions against completed results.
+ *
+ * <p>Predictions are locked and scored three-way (win/draw/loss) using the
+ * {@link DrawModel}. A "hit" means the model's single most likely outcome
+ * matched the actual result; the Brier score is the multiclass Brier over the
+ * three outcomes (0 = perfect, 2 = worst; a uniform 1/3-1/3-1/3 guess = 0.667).
  */
 public final class Tracker {
 
@@ -45,10 +51,12 @@ public final class Tracker {
                 .filter(Fixture::isWorldCupFinals)
                 .filter(fx -> !fx.date().isBefore(today))
                 .filter(fx -> !alreadyLocked.contains(key(fx.date(), fx.homeTeam(), fx.awayTeam())))
-                .map(fx -> new Prediction(
-                        fx.date(), fx.homeTeam(), fx.awayTeam(), fx.neutralVenue(),
-                        elo.winProbability(fx.homeTeam(), fx.awayTeam(), fx.neutralVenue()),
-                        today))
+                .map(fx -> {
+                    DrawModel.Probabilities p = elo.outcomeProbabilities(
+                            fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
+                    return new Prediction(fx.date(), fx.homeTeam(), fx.awayTeam(),
+                            fx.neutralVenue(), p.homeWin(), p.draw(), p.awayWin(), today);
+                })
                 .sorted(Comparator.comparing(Prediction::matchDate))
                 .toList();
     }
@@ -66,19 +74,30 @@ public final class Tracker {
             if (result == null) {
                 continue;
             }
-            double actual = switch (result.outcome()) {
-                case HOME_WIN -> 1.0;
-                case DRAW -> 0.5;
-                case AWAY_WIN -> 0.0;
-            };
-            Match.Outcome favored = p.pHome() >= 0.5
-                    ? Match.Outcome.HOME_WIN
-                    : Match.Outcome.AWAY_WIN;
+            Match.Outcome actual = result.outcome();
             scored.add(new ScoredPrediction(p, result,
-                    result.outcome() == favored,
-                    (p.pHome() - actual) * (p.pHome() - actual)));
+                    p.predictedOutcome() == actual,
+                    multiclassBrier(p, actual)));
         }
         return scored;
+    }
+
+    /**
+     * Multiclass Brier score for one prediction: the squared error summed over
+     * the win, draw and loss probabilities against the one-hot actual outcome.
+     */
+    static double multiclassBrier(Prediction p, Match.Outcome actual) {
+        return sq(p.pHome() - indicator(actual, Match.Outcome.HOME_WIN))
+                + sq(p.pDraw() - indicator(actual, Match.Outcome.DRAW))
+                + sq(p.pAway() - indicator(actual, Match.Outcome.AWAY_WIN));
+    }
+
+    private static double indicator(Match.Outcome actual, Match.Outcome target) {
+        return actual == target ? 1.0 : 0.0;
+    }
+
+    private static double sq(double x) {
+        return x * x;
     }
 
     /** Renders the README tracker section as Markdown. */
@@ -88,7 +107,9 @@ public final class Tracker {
         StringBuilder md = new StringBuilder();
         md.append("_Updated ").append(today)
           .append(" — predictions are locked before kickoff and never edited; ")
-          .append("the git history of `predictions/predictions.csv` is the proof._\n\n");
+          .append("the git history of `predictions/predictions.csv` is the proof. ")
+          .append("Each pick is the model's most likely outcome; the H/D/A column is its ")
+          .append("full home-win / draw / away-win split, and the Brier score is multiclass._\n\n");
 
         if (scored.isEmpty()) {
             md.append("**No locked predictions have been resolved yet.**\n");
@@ -96,20 +117,21 @@ public final class Tracker {
             long correct = scored.stream().filter(ScoredPrediction::correct).count();
             double brier = scored.stream().mapToDouble(ScoredPrediction::brier).average().orElse(0);
             md.append(String.format(Locale.ROOT,
-                    "**Record: %d/%d correct (%.1f%%) — Brier %.3f** (coin flip = 0.250)%n%n",
+                    "**Record: %d/%d picks correct (%.1f%%) — multiclass Brier %.3f** "
+                            + "(uniform guess = 0.667)%n%n",
                     correct, scored.size(), 100.0 * correct / scored.size(), brier));
 
-            md.append("| Date | Match | Pick (locked) | Result | Hit |\n");
-            md.append("|---|---|---|---|---|\n");
+            md.append("| Date | Match | Pick | H/D/A | Result | Hit |\n");
+            md.append("|---|---|---|---|---|---|\n");
             List<ScoredPrediction> recent =
                     scored.subList(Math.max(0, scored.size() - 15), scored.size());
             for (ScoredPrediction s : recent) {
                 Prediction p = s.prediction();
                 Match r = s.result();
                 md.append(String.format(Locale.ROOT,
-                        "| %s | %s vs %s | %s (%.0f%%) | %d-%d | %s |%n",
+                        "| %s | %s vs %s | %s | %s | %d-%d | %s |%n",
                         DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
-                        p.favorite(), 100 * p.favoriteProbability(),
+                        p.pick(), splitLabel(p),
                         r.homeScore(), r.awayScore(),
                         s.correct() ? "✅" : "❌"));
             }
@@ -117,17 +139,23 @@ public final class Tracker {
 
         if (!pending.isEmpty()) {
             md.append("\n**Locked for upcoming matches:**\n\n");
-            md.append("| Date | Match | Pick | Confidence |\n");
+            md.append("| Date | Match | Pick | H/D/A |\n");
             md.append("|---|---|---|---|\n");
             pending.stream()
                     .sorted(Comparator.comparing(Prediction::matchDate))
                     .limit(10)
                     .forEach(p -> md.append(String.format(Locale.ROOT,
-                            "| %s | %s vs %s | %s | %.0f%% |%n",
+                            "| %s | %s vs %s | %s | %s |%n",
                             DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
-                            p.favorite(), 100 * p.favoriteProbability())));
+                            p.pick(), splitLabel(p))));
         }
         return md.toString();
+    }
+
+    /** Compact "73/18/9%" home-win / draw / away-win label. */
+    private static String splitLabel(Prediction p) {
+        return String.format(Locale.ROOT, "%.0f/%.0f/%.0f%%",
+                100 * p.pHome(), 100 * p.pDraw(), 100 * p.pAway());
     }
 
     /** Replaces the content between the tracker markers; appends a section if absent. */

@@ -180,7 +180,7 @@ public final class Main {
                 added.size(), ledger.size());
         long correct = scored.stream().filter(Tracker.ScoredPrediction::correct).count();
         if (!scored.isEmpty()) {
-            System.out.printf("Scored %d: %d correct (%.1f%%), Brier %.4f%n",
+            System.out.printf("Scored %d: %d correct (%.1f%%), multiclass Brier %.4f%n",
                     scored.size(), correct, 100.0 * correct / scored.size(),
                     scored.stream().mapToDouble(Tracker.ScoredPrediction::brier)
                             .average().orElse(0));
