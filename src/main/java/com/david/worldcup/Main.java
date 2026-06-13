@@ -543,6 +543,11 @@ public final class Main {
 
         Files.writeString(readmePath, readme);
 
+        // Structured data for the static demo page (GitHub Pages reads docs/data/tracker.json).
+        Path trackerJson = Path.of("docs/data/tracker.json");
+        Files.createDirectories(trackerJson.getParent());
+        Files.writeString(trackerJson, Tracker.renderJson(scored, pending, odds, 16, today));
+
         System.out.printf("Locked %d new prediction(s); ledger holds %d.%n",
                 added.size(), ledger.size());
         long correct = scored.stream().filter(Tracker.ScoredPrediction::correct).count();

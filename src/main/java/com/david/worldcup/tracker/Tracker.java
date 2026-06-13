@@ -255,6 +255,96 @@ public final class Tracker {
         return md.toString();
     }
 
+    /**
+     * Serialises the tracker state to JSON for the static demo page: the record,
+     * resolved matches, upcoming predictions and the top championship odds.
+     */
+    public static String renderJson(List<ScoredPrediction> scored, List<Prediction> pending,
+                                    List<TournamentSimulator.TeamOdds> titleOdds, int topN,
+                                    LocalDate today) {
+        long correct = scored.stream().filter(ScoredPrediction::correct).count();
+        double brier = scored.stream().mapToDouble(ScoredPrediction::brier).average().orElse(0);
+
+        StringBuilder j = new StringBuilder();
+        j.append("{\n");
+        j.append("  \"updated\": \"").append(today).append("\",\n");
+        j.append("  \"model\": \"Dixon-Coles + market-value prior\",\n");
+        j.append("  \"record\": {\"correct\": ").append(correct)
+         .append(", \"evaluated\": ").append(scored.size())
+         .append(", \"brier\": ").append(num(brier)).append("},\n");
+
+        j.append("  \"resolved\": [");
+        for (int i = 0; i < scored.size(); i++) {
+            ScoredPrediction s = scored.get(i);
+            Prediction p = s.prediction();
+            Match r = s.result();
+            ScorePredictor.PredictedScore ps = predictedScore(p);
+            j.append(i == 0 ? "\n    " : ",\n    ").append("{")
+             .append("\"date\": \"").append(DAY.format(p.matchDate())).append("\", ")
+             .append("\"home\": ").append(str(p.homeTeam())).append(", ")
+             .append("\"away\": ").append(str(p.awayTeam())).append(", ")
+             .append("\"pick\": ").append(str(p.pick())).append(", ")
+             .append("\"pHome\": ").append(num(p.pHome())).append(", ")
+             .append("\"pDraw\": ").append(num(p.pDraw())).append(", ")
+             .append("\"pAway\": ").append(num(p.pAway())).append(", ")
+             .append("\"predScore\": \"").append(ps.modalHome()).append("-").append(ps.modalAway())
+             .append("\", \"result\": \"").append(r.homeScore()).append("-").append(r.awayScore())
+             .append("\", \"hit\": ").append(s.correct()).append("}");
+        }
+        j.append(scored.isEmpty() ? "],\n" : "\n  ],\n");
+
+        List<Prediction> upcoming = pending.stream()
+                .sorted(Comparator.comparing(Prediction::matchDate)).limit(12).toList();
+        j.append("  \"upcoming\": [");
+        for (int i = 0; i < upcoming.size(); i++) {
+            Prediction p = upcoming.get(i);
+            ScorePredictor.PredictedScore ps = predictedScore(p);
+            j.append(i == 0 ? "\n    " : ",\n    ").append("{")
+             .append("\"date\": \"").append(DAY.format(p.matchDate())).append("\", ")
+             .append("\"home\": ").append(str(p.homeTeam())).append(", ")
+             .append("\"away\": ").append(str(p.awayTeam())).append(", ")
+             .append("\"pick\": ").append(str(p.pick())).append(", ")
+             .append("\"pHome\": ").append(num(p.pHome())).append(", ")
+             .append("\"pDraw\": ").append(num(p.pDraw())).append(", ")
+             .append("\"pAway\": ").append(num(p.pAway())).append(", ")
+             .append("\"predScore\": \"").append(ps.modalHome()).append("-").append(ps.modalAway())
+             .append("\"}");
+        }
+        j.append(upcoming.isEmpty() ? "],\n" : "\n  ],\n");
+
+        int n = Math.min(topN, titleOdds.size());
+        j.append("  \"titleOdds\": [");
+        for (int i = 0; i < n; i++) {
+            TournamentSimulator.TeamOdds o = titleOdds.get(i);
+            j.append(i == 0 ? "\n    " : ",\n    ").append("{")
+             .append("\"team\": ").append(str(o.team())).append(", ")
+             .append("\"title\": ").append(num(100 * o.titleShare())).append(", ")
+             .append("\"final\": ").append(num(100 * o.finalShare())).append(", ")
+             .append("\"semis\": ").append(num(100 * o.semiShare())).append("}");
+        }
+        j.append(n == 0 ? "]\n}" : "\n  ]\n}");
+        return j.toString();
+    }
+
+    private static String num(double v) {
+        return String.format(Locale.ROOT, "%.4f", v);
+    }
+
+    private static String str(String s) {
+        StringBuilder b = new StringBuilder("\"");
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '"' || c == '\\') {
+                b.append('\\').append(c);
+            } else if (c == '\n') {
+                b.append("\\n");
+            } else {
+                b.append(c);
+            }
+        }
+        return b.append('"').toString();
+    }
+
     /** Replaces the content between the tracker markers; appends a section if absent. */
     public static String replaceSection(String readme, String newSection) {
         return replaceSection(readme, SECTION_START, SECTION_END, newSection);
