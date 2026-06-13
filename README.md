@@ -11,9 +11,10 @@ tournament unfolds.
 
 A GitHub Action runs daily: it pulls fresh results, locks predictions for
 upcoming fixtures with the **Dixon-Coles goal model** (the best performer in the
-held-out comparison below), scores completed ones, and updates this section
-automatically. Predictions locked earlier under the Elo model are preserved
-unchanged — a prediction is never re-locked once it has been made.
+held-out comparison below, with squad market value folded in as a prior when
+available), scores completed ones, and updates this section automatically.
+Predictions locked earlier under the Elo model are preserved unchanged — a
+prediction is never re-locked once it has been made.
 
 <!-- TRACKER:START -->
 _Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._
@@ -54,8 +55,8 @@ _These were played **before the model existed**, so they were never locked. Each
 
 | Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |
 |---|---|---|---|---|---|---|---|
-| Jun 11 | Mexico vs South Africa | Mexico | 64/24/13% | 1-0 (1.7–0.6) | 2-0 | 1 | ✅ |
-| Jun 11 | South Korea vs Czech Republic | South Korea | 42/28/30% | 1-1 (1.4–1.1) | 2-1 | 1 | ✅ |
+| Jun 11 | Mexico vs South Africa | Mexico | 63/24/13% | 1-0 (1.8–0.7) | 2-0 | 1 | ✅ |
+| Jun 11 | South Korea vs Czech Republic | South Korea | 40/28/32% | 1-1 (1.3–1.1) | 2-1 | 1 | ✅ |
 
 <!-- EARLY:END -->
 
@@ -115,6 +116,8 @@ mvn compile exec:java -Dexec.args="--upcoming"   # every fixture with win/draw/l
 mvn compile exec:java -Dexec.args="--predict=France,Argentina"   # any matchup
 mvn compile exec:java -Dexec.args="--goals"      # goal models vs Elo: held-out comparison
 mvn compile exec:java -Dexec.args="--rest"       # does a rest-days edge improve the model?
+mvn compile exec:java -Dexec.args="--values"     # does squad market value improve the model?
+mvn compile exec:java -Dexec.args="--values-tune" # grid-search the market-value prior weights
 ```
 
 (PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)
@@ -227,6 +230,50 @@ on held-out Brier, the betting layer is a small add-on: convert odds to implied
 probabilities (remove the overround), bet when the model's probability exceeds
 the implied one by a margin, and size with fractional Kelly. That step needs a
 historical-odds feed, which the current dataset does not include.
+
+## Squad market value
+
+Elo and goal ratings are *lagging* — they learn a team's strength from results.
+Squad market value is a *leading* signal: it reflects current player quality
+directly. The model folds it in as a **prior on the Dixon-Coles attack/defence
+ratings**: a richer-than-average squad gets a higher attack and lower (better)
+defence prior, and each team's fitted rating is shrunk toward that prior. Two
+levers control the shrinkage (`ValueWeights`): a uniform `globalWeight` applied
+to every team, and a `sparseWeight` that adds extra pull for teams with little
+match data. Tuning (below) found the sparse lever unnecessary, so in practice it
+is the global blend that does the work.
+
+The model reads `data/market_values.csv` with columns `team,as_of,value_eur`.
+Multiple dated rows per team are allowed, and lookups always take the most
+recent value *on or before* the match date, so nothing leaks from the future.
+When the file is absent the model behaves exactly as before. A small
+**illustrative** sample ships in the repo; replace it with real data.
+
+**Getting real data.** Transfermarkt has no public API, so use the community
+datasets (download them where you have network access, not from CI):
+
+- [dcaribou/transfermarkt-datasets](https://github.com/dcaribou/transfermarkt-datasets)
+  — the best fit: a `player_valuations` table with *dated* market values plus
+  national-team data, refreshed weekly. Aggregate player valuations to a squad
+  total per national team per date to build `market_values.csv`.
+- [salimt/football-datasets](https://github.com/salimt/football-datasets) and the
+  Kaggle mirror [davidcariboo/player-scores](https://www.kaggle.com/datasets/davidcariboo/player-scores)
+  are alternatives.
+
+**Does it help? (tuned, held-out)** `--values-tune` grid-searches the weights on
+World Cups 2006-2018 and validates once on held-out 2022. The tuned prior
+(`globalWeight 0.20, sparseWeight 0, valueScale 0.30`) beats plain Dixon-Coles
+out of sample — multiclass Brier **0.6065 vs 0.6123** on 2022, and **0.5629 vs
+0.5650** in-sample — so it is now the default. Caveats kept in view: the gain is
+small (~0.006 Brier, identical 33/64 pick accuracy), it rests on a single
+held-out tournament, and the winning weights sit at the edge of the search grid,
+so a wider sweep may do a little better. With only a *current* value snapshot
+the historical rows are unchanged (no value existed then); the verdict above
+needs the historical snapshots that `research/build_market_values.py` produces.
+
+At default weights the untuned prior was a wash (Brier 0.575 vs 0.574); the
+improvement comes only after tuning, and only from the global blend — the
+sparse-team lever, intuitive as it was, earned nothing at World Cup level.
 
 ## Rest-days differential (experimental)
 

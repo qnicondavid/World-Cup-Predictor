@@ -14,10 +14,13 @@ import com.david.worldcup.goals.EloPoissonModel;
 import com.david.worldcup.goals.EnsembleModel;
 import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.GoalModelBacktest;
+import com.david.worldcup.goals.ValueTuner;
+import com.david.worldcup.goals.ValueWeights;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 import com.david.worldcup.rest.RestBacktest;
 import com.david.worldcup.sim.TournamentSimulator;
+import com.david.worldcup.value.MarketValueTable;
 import com.david.worldcup.tracker.PredictionLedger;
 import com.david.worldcup.tracker.Tracker;
 
@@ -69,6 +72,10 @@ public final class Main {
             runGoalComparison(matches);
         } else if (arguments.contains("--rest")) {
             runRest(matches);
+        } else if (arguments.contains("--values-tune")) {
+            runValuesTune(matches);
+        } else if (arguments.contains("--values")) {
+            runValues(matches);
         } else if (arguments.stream().anyMatch(a -> a.startsWith("--predict="))) {
             runPredict(matches, arguments);
         } else {
@@ -170,6 +177,94 @@ public final class Main {
         System.out.println("Reference: uniform thirds = multiclass Brier 0.667.");
     }
 
+    private static void runValuesTune(List<Match> matches) throws IOException {
+        MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
+        System.out.println("=== Tuning the market-value prior (train 2006-2018, validate 2022) ===");
+        if (values.isEmpty()) {
+            System.out.println("No data/market_values.csv found — see the README for how to build it.");
+            return;
+        }
+        ValueTuner tuner = new ValueTuner(12, values);
+        ValueWeights baseline = new ValueWeights(0.0, 0.0, 5.0, 0.2); // (0,0,*) == plain Dixon-Coles
+
+        List<ValueTuner.Prepared> tuning = tuner.prepareAll(matches, Backtest.TUNING_WINDOWS);
+        List<ValueTuner.Scored> ranked = new ArrayList<>();
+        for (ValueWeights w : ValueTuner.defaultGrid()) {
+            ranked.add(tuner.score(tuning, w));
+        }
+        ranked.sort(Comparator.comparingDouble(ValueTuner.Scored::brier));
+        ValueTuner.Scored baseTuning = tuner.score(tuning, baseline);
+
+        System.out.println("Tuning-set leaderboard (pooled WC 2006-2018), best first:");
+        for (ValueTuner.Scored s : ranked.subList(0, Math.min(8, ranked.size()))) {
+            System.out.println("  " + s.summary());
+        }
+        System.out.println("  baseline plain DC: " + baseTuning.summary());
+
+        // Validate the tuning winner once on the held-out 2022 World Cup.
+        ValueWeights best = ranked.get(0).weights();
+        List<ValueTuner.Prepared> validation =
+                tuner.prepareAll(matches, List.of(Backtest.WORLD_CUPS.get(4)));
+        ValueTuner.Scored bestVal = tuner.score(validation, best);
+        ValueTuner.Scored baseVal = tuner.score(validation, baseline);
+
+        System.out.println();
+        System.out.println("Held-out World Cup 2022:");
+        System.out.println("  plain Dixon-Coles:  " + baseVal.summary());
+        System.out.println("  tuned value prior:  " + bestVal.summary());
+        System.out.println();
+        if (bestVal.brier() < baseVal.brier()) {
+            System.out.printf(Locale.ROOT,
+                    "Verdict: the tuned prior improves held-out Brier (%.4f -> %.4f). Worth keeping.%n",
+                    baseVal.brier(), bestVal.brier());
+        } else {
+            System.out.println("Verdict: even tuned, the value prior does not beat plain Dixon-Coles "
+                    + "out of sample. Treat as a negative finding.");
+        }
+    }
+
+    private static void runValues(List<Match> matches) throws IOException {
+        MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
+        System.out.println("=== Squad market value as a Dixon-Coles prior: held-out World Cups ===");
+        if (values.isEmpty()) {
+            System.out.println("No data/market_values.csv found — see the README for how to build it");
+            System.out.println("from the Transfermarkt datasets.");
+            return;
+        }
+        System.out.println("Plain Dixon-Coles vs the value-adjusted model, same train-before-each-");
+        System.out.println("tournament regime. Needs historical value snapshots covering each World");
+        System.out.println("Cup; with only a current snapshot the historical rows are identical.");
+        System.out.println();
+
+        record Entry(String name, GoalModelBacktest.Factory factory) {}
+        List<Entry> models = List.of(
+                new Entry("Dixon-Coles", (tr, asof) -> DixonColesModel.fit(tr, asof)),
+                new Entry("DC + market value",
+                        (tr, asof) -> DixonColesModel.fitWithValues(tr, asof, values, ValueWeights.DEFAULT)));
+
+        GoalModelBacktest bt = new GoalModelBacktest(12);
+        System.out.printf("%-20s | %-13s | %s%n",
+                "Model", "Combined", "per-tournament Brier (2006/10/14/18/22)");
+        for (Entry e : models) {
+            int evaluated = 0;
+            int correct = 0;
+            double brierSum = 0.0;
+            StringBuilder per = new StringBuilder();
+            for (Backtest.Window w : Backtest.WORLD_CUPS) {
+                Backtest.ThreeWayResult r = bt.run(matches, w, e.factory());
+                per.append(String.format(Locale.ROOT, " %.3f", r.multiclassBrier()));
+                evaluated += r.matchesEvaluated();
+                correct += r.correct();
+                brierSum += r.multiclassBrier() * r.matchesEvaluated();
+            }
+            double combined = evaluated == 0 ? 0.0 : brierSum / evaluated;
+            System.out.printf(Locale.ROOT, "%-20s | %3d/%-4d %.3f |%s%n",
+                    e.name(), correct, evaluated, combined, per);
+        }
+        System.out.println();
+        System.out.println("Reference: uniform thirds = multiclass Brier 0.667.");
+    }
+
     private static void runRest(List<Match> matches) {
         System.out.println("=== Rest-days differential: does extra recovery beat the plain rating? ===");
         System.out.println("Adds rating points per day of rest advantage; 0 = Elo + DrawModel baseline.");
@@ -251,9 +346,13 @@ public final class Main {
         EloRatingSystem elo = new EloRatingSystem();
         matches.forEach(elo::processMatch);
 
-        // Production prediction model: Dixon-Coles, the best performer in the held-out
-        // comparison, fit on all history as of today.
-        DixonColesModel predictionModel = DixonColesModel.fit(matches, today);
+        // Production prediction model: Dixon-Coles (best performer in the held-out
+        // comparison), fit on all history as of today and folded with squad market
+        // value as a prior when data/market_values.csv is present.
+        MarketValueTable marketValues = MarketValueTable.load(Path.of("data/market_values.csv"));
+        DixonColesModel predictionModel = marketValues.isEmpty()
+                ? DixonColesModel.fit(matches, today)
+                : DixonColesModel.fitWithValues(matches, today, marketValues, ValueWeights.DEFAULT);
 
         // Lock predictions for upcoming World Cup fixtures not yet in the ledger.
         List<Fixture> fixtures = new MatchCsvParser().parseFixtures(csv);
@@ -303,7 +402,9 @@ public final class Main {
         List<PredictionLedger.Prediction> earlyPredictions = new ArrayList<>();
         for (Match mt : earlyMatches) {
             List<Match> before = matches.stream().filter(x -> x.date().isBefore(mt.date())).toList();
-            DixonColesModel retro = DixonColesModel.fit(before, mt.date());
+            DixonColesModel retro = marketValues.isEmpty()
+                    ? DixonColesModel.fit(before, mt.date())
+                    : DixonColesModel.fitWithValues(before, mt.date(), marketValues, ValueWeights.DEFAULT);
             DrawModel.Probabilities pr =
                     retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
             var goals = retro.expectedGoals(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
