@@ -32,6 +32,7 @@ mvn compile exec:java -Dexec.args="--track"      # lock/score predictions, updat
 mvn compile exec:java -Dexec.args="--simulate"   # Monte Carlo: 10,000 tournament sims
 mvn compile exec:java -Dexec.args="--upcoming"   # every fixture with win/draw/loss probs
 mvn compile exec:java -Dexec.args="--predict=France,Argentina"   # any matchup
+mvn compile exec:java -Dexec.args="--goals"      # goal models vs Elo: held-out comparison
 ```
 
 (PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)
@@ -85,6 +86,65 @@ probabilities, resolves groups (winners, runners-up, best thirds), then samples
 the knockout bracket to a champion. Documented simplifications: Elo tie-breaks
 instead of goal difference, seeded knockout pairings, and knockout draws folded
 into the win probability.
+
+## Goal models (experimental)
+
+Elo rates a team on a single axis. A goal model instead gives every team a
+separate **attack** and **defence** rating and predicts the *scoreline*, which
+yields win/draw/loss probabilities from first principles rather than from an
+empirical draw curve. This is the standard approach for forecasts that aim to
+beat the bookmaker, so the repo now carries three of them, all under
+`com.david.worldcup.goals` and comparable head-to-head via `--goals`:
+
+- **Dixon-Coles** — independent Poisson goals from fitted attack/defence ratings,
+  with a home-advantage term, the low-score correlation correction (`rho`) that
+  fixes Poisson's under-counting of 0-0 and 1-1, exponential **time decay**
+  (2-year half-life — squads turn over) and shrinkage toward the average for
+  rarely-seen teams. Fit by weighted maximum likelihood via iterative scaling.
+- **Bivariate Poisson** — the same attack/defence fit plus a shared component
+  that makes the two scores positively correlated.
+- **Elo-Poisson** — the lightweight option: reuse the existing Elo gap and map
+  it to two Poisson rates by regression. Keeps the tuned Elo engine; weaker.
+
+Each is evaluated the same honest way as Elo — fit only on the 12 years before a
+World Cup, then predict every finals match — and scored by multiclass Brier
+against the **Elo + DrawModel** baseline.
+
+### Held-out comparison
+
+Scored on 320 World Cup matches (2006-2022), train-before-each-tournament:
+
+| Model | Picks correct | Combined multiclass Brier |
+|---|---|---|
+| Dixon-Coles | 183/320 (57.2%) | 0.574 |
+| Bivariate Poisson | 183/320 (57.2%) | 0.573 |
+| Elo-Poisson | 178/320 (55.6%) | 0.575 |
+| Elo + DrawModel (baseline) | 178/320 (55.6%) | 0.576 |
+| Uniform reference | — | 0.667 |
+
+The goal models edge the Elo baseline on both metrics, but modestly — five more
+correct picks and ~0.003 of Brier. Findings:
+
+- **The bivariate covariance term adds nothing** over Dixon-Coles (0.573 vs
+  0.574), the usual result for football. Dixon-Coles is the goal model to keep.
+- **The edge is uneven**: Dixon-Coles is clearly better in 2006 (0.525 vs 0.538)
+  and 2018 (0.576 vs 0.596), while Elo wins 2014 and 2022. They capture different
+  things, so an **Elo + Dixon-Coles ensemble** (averaging the two probability
+  vectors) is also wired into `--goals`; averaging comparable-but-different
+  models often beats either alone. Re-run `--goals` to see its row.
+- A Brier near 0.57 is roughly bookmaker territory (~0.55-0.56 on World Cup
+  matches) but not yet clearly beating the closing line — and that cannot be
+  confirmed without an odds feed.
+
+The fitter itself is validated against `research/goal_models.py`: on data from a
+known Dixon-Coles process it recovers team attack strengths at correlation 0.99.
+
+**Toward beating the bookmaker.** Calibration comes first — a model only has
+*value* if its probabilities are better than the closing line. Once a model wins
+on held-out Brier, the betting layer is a small add-on: convert odds to implied
+probabilities (remove the overround), bet when the model's probability exceeds
+the implied one by a margin, and size with fractional Kelly. That step needs a
+historical-odds feed, which the current dataset does not include.
 
 ## 2026 prediction accuracy (live)
 

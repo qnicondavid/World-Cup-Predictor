@@ -7,6 +7,12 @@ import com.david.worldcup.elo.EloConfig;
 import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.elo.Tuner;
 import com.david.worldcup.elo.DrawModel;
+import com.david.worldcup.goals.BivariatePoissonModel;
+import com.david.worldcup.goals.DixonColesModel;
+import com.david.worldcup.goals.EloDrawBaselineModel;
+import com.david.worldcup.goals.EloPoissonModel;
+import com.david.worldcup.goals.EnsembleModel;
+import com.david.worldcup.goals.GoalModelBacktest;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 import com.david.worldcup.sim.TournamentSimulator;
@@ -21,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * CLI entry point.
@@ -56,6 +63,8 @@ public final class Main {
             runSimulation(matches, csv);
         } else if (arguments.contains("--upcoming")) {
             runUpcoming(matches, csv);
+        } else if (arguments.contains("--goals")) {
+            runGoalComparison(matches);
         } else if (arguments.stream().anyMatch(a -> a.startsWith("--predict="))) {
             runPredict(matches, arguments);
         } else {
@@ -116,6 +125,45 @@ public final class Main {
         System.out.println();
         System.out.println("Reference points: coin flip = 50% accuracy, Brier 0.25.");
         System.out.println("Draws always count as misses in the binary rows, so accuracy is understated.");
+    }
+
+    private static void runGoalComparison(List<Match> matches) {
+        System.out.println("=== Goal models vs Elo baseline: held-out World Cups (three-way) ===");
+        System.out.println("Each model trains only on the 12 years before each tournament, then");
+        System.out.println("predicts every finals match from that fit. Lower multiclass Brier is better.");
+        System.out.println();
+
+        record Entry(String name, GoalModelBacktest.Factory factory) {}
+        List<Entry> models = List.of(
+                new Entry("Dixon-Coles", (tr, asof) -> DixonColesModel.fit(tr, asof)),
+                new Entry("Bivariate Poisson", (tr, asof) -> BivariatePoissonModel.fit(tr, asof)),
+                new Entry("Elo-Poisson", (tr, asof) -> EloPoissonModel.fit(tr)),
+                new Entry("Elo + DrawModel", (tr, asof) -> EloDrawBaselineModel.fit(tr)),
+                new Entry("Elo+DC ensemble", (tr, asof) -> new EnsembleModel("Elo+DC ensemble",
+                        List.of(DixonColesModel.fit(tr, asof), EloDrawBaselineModel.fit(tr)))));
+
+        GoalModelBacktest bt = new GoalModelBacktest(12);
+        System.out.printf("%-20s | %-13s | %s%n",
+                "Model", "Combined", "per-tournament Brier (2006/10/14/18/22)");
+        for (Entry e : models) {
+            int evaluated = 0;
+            int correct = 0;
+            double brierSum = 0.0;
+            StringBuilder per = new StringBuilder();
+            for (Backtest.Window w : Backtest.WORLD_CUPS) {
+                Backtest.ThreeWayResult r = bt.run(matches, w, e.factory());
+                per.append(String.format(Locale.ROOT, " %.3f", r.multiclassBrier()));
+                evaluated += r.matchesEvaluated();
+                correct += r.correct();
+                brierSum += r.multiclassBrier() * r.matchesEvaluated();
+            }
+            double combined = evaluated == 0 ? 0.0 : brierSum / evaluated;
+            System.out.printf(Locale.ROOT, "%-20s | %3d/%-4d %.3f |%s%n",
+                    e.name(), correct, evaluated, combined, per);
+        }
+
+        System.out.println();
+        System.out.println("Reference: uniform thirds = multiclass Brier 0.667.");
     }
 
     private static void runTuning(List<Match> matches) {
