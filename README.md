@@ -71,14 +71,17 @@ this section automatically.
 <!-- TRACKER:START -->
 _Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof._
 
-**No locked predictions have been resolved yet.**
+**Record: 1/2 correct (50.0%) — Brier 0.180** (coin flip = 0.250)
+
+| Date | Match | Pick (locked) | Result | Hit |
+|---|---|---|---|---|
+| Jun 12 | Canada vs Bosnia and Herzegovina | Canada (84%) | 1-1 | ❌ |
+| Jun 12 | United States vs Paraguay | United States (51%) | 4-1 | ✅ |
 
 **Locked for upcoming matches:**
 
 | Date | Match | Pick | Confidence |
 |---|---|---|---|
-| Jun 12 | Canada vs Bosnia and Herzegovina | Canada | 84% |
-| Jun 12 | United States vs Paraguay | United States | 51% |
 | Jun 13 | Qatar vs Switzerland | Switzerland | 91% |
 | Jun 13 | Brazil vs Morocco | Brazil | 60% |
 | Jun 13 | Haiti vs Scotland | Scotland | 73% |
@@ -87,6 +90,8 @@ _Updated 2026-06-13 — predictions are locked before kickoff and never edited; 
 | Jun 14 | Ivory Coast vs Ecuador | Ecuador | 74% |
 | Jun 14 | Netherlands vs Japan | Netherlands | 50% |
 | Jun 14 | Sweden vs Tunisia | Sweden | 57% |
+| Jun 15 | Belgium vs Egypt | Belgium | 75% |
+| Jun 15 | Iran vs New Zealand | Iran | 77% |
 
 <!-- TRACKER:END -->
 
