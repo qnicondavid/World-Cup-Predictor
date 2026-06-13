@@ -93,30 +93,29 @@ upcoming fixtures using current ratings, scores completed ones, and updates
 this section automatically.
 
 <!-- TRACKER:START -->
-_Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof._
+_Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome; the H/D/A column is its full home-win / draw / away-win split, and the Brier score is multiclass._
 
-**Record: 1/2 correct (50.0%) — Brier 0.180** (coin flip = 0.250)
+**Record: 1/2 picks correct (50.0%) — multiclass Brier 0.925** (uniform guess = 0.667)
 
-| Date | Match | Pick (locked) | Result | Hit |
-|---|---|---|---|---|
-| Jun 12 | Canada vs Bosnia and Herzegovina | Canada (84%) | 1-1 | ❌ |
-| Jun 12 | United States vs Paraguay | United States (51%) | 4-1 | ✅ |
+| Date | Match | Pick | H/D/A | Result | Hit |
+|---|---|---|---|---|---|
+| Jun 12 | Canada vs Bosnia and Herzegovina | Canada | 75/18/7% | 1-1 | ❌ |
+| Jun 12 | United States vs Paraguay | United States | 36/30/34% | 4-1 | ✅ |
 
 **Locked for upcoming matches:**
 
-| Date | Match | Pick | Confidence |
+| Date | Match | Pick | H/D/A |
 |---|---|---|---|
-| Jun 13 | Qatar vs Switzerland | Switzerland | 91% |
-| Jun 13 | Brazil vs Morocco | Brazil | 60% |
-| Jun 13 | Haiti vs Scotland | Scotland | 73% |
-| Jun 13 | Australia vs Turkey | Turkey | 62% |
-| Jun 14 | Germany vs Curaçao | Germany | 93% |
-| Jun 14 | Ivory Coast vs Ecuador | Ecuador | 74% |
-| Jun 14 | Netherlands vs Japan | Netherlands | 50% |
-| Jun 14 | Sweden vs Tunisia | Sweden | 57% |
-| Jun 15 | Belgium vs Egypt | Belgium | 75% |
-| Jun 15 | Iran vs New Zealand | Iran | 77% |
-
+| Jun 13 | Qatar vs Switzerland | Switzerland | 3/12/85% |
+| Jun 13 | Brazil vs Morocco | Brazil | 46/28/26% |
+| Jun 13 | Haiti vs Scotland | Scotland | 15/25/60% |
+| Jun 13 | Australia vs Turkey | Turkey | 25/28/48% |
+| Jun 14 | Germany vs Curaçao | Germany | 88/10/2% |
+| Jun 14 | Ivory Coast vs Ecuador | Ecuador | 14/25/61% |
+| Jun 14 | Netherlands vs Japan | Netherlands | 36/30/35% |
+| Jun 14 | Sweden vs Tunisia | Sweden | 42/29/29% |
+| Jun 15 | Belgium vs Egypt | Belgium | 63/24/13% |
+| Jun 15 | Iran vs New Zealand | Iran | 65/24/11% |
 <!-- TRACKER:END -->
 
 ## Data
