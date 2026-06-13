@@ -2,7 +2,6 @@ package com.david.worldcup.tracker;
 
 import com.david.worldcup.data.MatchCsvParser;
 import com.david.worldcup.elo.DrawModel;
-import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.model.Match;
 
 import java.io.IOException;
@@ -20,19 +19,24 @@ import java.util.Locale;
  * ("locked") before the match is played and never modified afterwards, so the
  * git history proves every prediction predates its result.
  *
- * <p>Each prediction stores an explicit win/draw/loss split so it can be scored
- * three-way. Predictions locked under the older binary schema (a single
- * {@code p_home} Elo expected score) are read transparently and expanded into a
- * split by the deterministic {@link DrawModel}; the locked expected score is
- * preserved exactly (it equals {@code pHome + pDraw / 2}).
+ * <p>Each prediction stores an explicit win/draw/loss split and, when the
+ * locking model is a goal model, the expected goals for each side (so the
+ * predicted scoreline is locked too). The CSV is read backward-compatibly:
+ * <ul>
+ *   <li>6 columns — the original Elo schema (a single {@code p_home} expected
+ *       score); expanded into a split via the deterministic {@link DrawModel}.</li>
+ *   <li>8 columns — win/draw/loss with no expected goals.</li>
+ *   <li>10 columns — win/draw/loss plus expected goals.</li>
+ * </ul>
+ * Missing expected goals are stored as blank and read back as {@code NaN}.
  */
 public final class PredictionLedger {
 
     private static final String HEADER =
-            "match_date,home_team,away_team,neutral,p_home,p_draw,p_away,locked_on";
+            "match_date,home_team,away_team,neutral,p_home,p_draw,p_away,xg_home,xg_away,locked_on";
 
-    /** Columns in the legacy schema: ...,neutral,p_home,locked_on (no draw/away). */
-    private static final int LEGACY_COLUMNS = 6;
+    private static final int LEGACY_COLUMNS = 6;   // ...,p_home,locked_on
+    private static final int THREE_WAY_COLUMNS = 8; // ...,p_home,p_draw,p_away,locked_on
 
     /**
      * @param matchDate    date of the predicted match
@@ -42,6 +46,8 @@ public final class PredictionLedger {
      * @param pHome        locked probability of a home win
      * @param pDraw        locked probability of a draw
      * @param pAway        locked probability of an away win
+     * @param xgHome       locked expected goals for the home side ({@code NaN} if not modelled)
+     * @param xgAway       locked expected goals for the away side ({@code NaN} if not modelled)
      * @param lockedOn     date the prediction was locked
      */
     public record Prediction(
@@ -52,24 +58,38 @@ public final class PredictionLedger {
             double pHome,
             double pDraw,
             double pAway,
+            double xgHome,
+            double xgAway,
             LocalDate lockedOn) {
+
+        /** Three-way constructor without expected goals. */
+        public Prediction(LocalDate matchDate, String homeTeam, String awayTeam,
+                          boolean neutralVenue, double pHome, double pDraw, double pAway,
+                          LocalDate lockedOn) {
+            this(matchDate, homeTeam, awayTeam, neutralVenue,
+                    pHome, pDraw, pAway, Double.NaN, Double.NaN, lockedOn);
+        }
 
         /**
          * Legacy binary constructor: expands a single locked win probability (the
-         * Elo expected score {@code E = P(win) + P(draw)/2}) into an explicit
-         * win/draw/loss split via the deterministic {@link DrawModel}. The locked
-         * expected score is not changed — it is recoverable as {@code pHome + pDraw/2}.
+         * Elo expected score {@code E = P(win) + P(draw)/2}) into a win/draw/loss
+         * split via the deterministic {@link DrawModel}. The locked expected score
+         * is preserved exactly ({@code pHome + pDraw/2}).
          */
         public Prediction(LocalDate matchDate, String homeTeam, String awayTeam,
                           boolean neutralVenue, double expectedScore, LocalDate lockedOn) {
-            this(matchDate, homeTeam, awayTeam, neutralVenue,
-                    expand(expectedScore), lockedOn);
+            this(matchDate, homeTeam, awayTeam, neutralVenue, expand(expectedScore), lockedOn);
         }
 
         private Prediction(LocalDate matchDate, String homeTeam, String awayTeam,
                            boolean neutralVenue, DrawModel.Probabilities split, LocalDate lockedOn) {
             this(matchDate, homeTeam, awayTeam, neutralVenue,
-                    split.homeWin(), split.draw(), split.awayWin(), lockedOn);
+                    split.homeWin(), split.draw(), split.awayWin(), Double.NaN, Double.NaN, lockedOn);
+        }
+
+        /** Whether a goal-model expected score was locked with this prediction. */
+        public boolean hasExpectedGoals() {
+            return !Double.isNaN(xgHome) && !Double.isNaN(xgAway);
         }
 
         /** The model's single most likely outcome. */
@@ -94,12 +114,6 @@ public final class PredictionLedger {
             return Math.max(pHome, Math.max(pDraw, pAway));
         }
 
-        /**
-         * Recovers the win/draw/loss split implied by an Elo expected score, by
-         * inverting the logistic to get the effective rating gap and feeding it
-         * through {@link DrawModel}. This reproduces exactly what
-         * {@link EloRatingSystem#outcomeProbabilities} produces at lock time.
-         */
         private static DrawModel.Probabilities expand(double expectedScore) {
             double e = Math.max(1e-9, Math.min(1.0 - 1e-9, expectedScore));
             double effectiveGap = 400.0 * Math.log10(e / (1.0 - e));
@@ -123,25 +137,27 @@ public final class PredictionLedger {
     }
 
     private static Prediction parse(List<String> f) {
+        LocalDate date = LocalDate.parse(f.get(0));
+        String home = f.get(1);
+        String away = f.get(2);
+        boolean neutral = Boolean.parseBoolean(f.get(3));
         if (f.size() <= LEGACY_COLUMNS) {
-            // Legacy schema: match_date,home,away,neutral,p_home(expected score),locked_on
-            return new Prediction(
-                    LocalDate.parse(f.get(0)),
-                    f.get(1),
-                    f.get(2),
-                    Boolean.parseBoolean(f.get(3)),
-                    Double.parseDouble(f.get(4)),
-                    LocalDate.parse(f.get(5)));
+            return new Prediction(date, home, away, neutral,
+                    Double.parseDouble(f.get(4)), LocalDate.parse(f.get(5)));
         }
-        return new Prediction(
-                LocalDate.parse(f.get(0)),
-                f.get(1),
-                f.get(2),
-                Boolean.parseBoolean(f.get(3)),
-                Double.parseDouble(f.get(4)),
-                Double.parseDouble(f.get(5)),
-                Double.parseDouble(f.get(6)),
-                LocalDate.parse(f.get(7)));
+        if (f.size() <= THREE_WAY_COLUMNS) {
+            return new Prediction(date, home, away, neutral,
+                    Double.parseDouble(f.get(4)), Double.parseDouble(f.get(5)),
+                    Double.parseDouble(f.get(6)), LocalDate.parse(f.get(7)));
+        }
+        return new Prediction(date, home, away, neutral,
+                Double.parseDouble(f.get(4)), Double.parseDouble(f.get(5)),
+                Double.parseDouble(f.get(6)), parseGoals(f.get(7)), parseGoals(f.get(8)),
+                LocalDate.parse(f.get(9)));
+    }
+
+    private static double parseGoals(String s) {
+        return s.isBlank() ? Double.NaN : Double.parseDouble(s);
     }
 
     public static void save(Path file, List<Prediction> predictions) throws IOException {
@@ -158,9 +174,15 @@ public final class PredictionLedger {
                     String.format(Locale.ROOT, "%.4f", p.pHome()),
                     String.format(Locale.ROOT, "%.4f", p.pDraw()),
                     String.format(Locale.ROOT, "%.4f", p.pAway()),
+                    goals(p.xgHome()),
+                    goals(p.xgAway()),
                     p.lockedOn().toString())).append('\n');
         }
         Files.writeString(file, sb.toString());
+    }
+
+    private static String goals(double value) {
+        return Double.isNaN(value) ? "" : String.format(Locale.ROOT, "%.4f", value);
     }
 
     private PredictionLedger() {

@@ -5,6 +5,7 @@ import com.david.worldcup.model.Match;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Dixon-Coles goal model: independent Poisson goal counts from fitted
@@ -32,6 +33,13 @@ public final class DixonColesModel implements GoalModel {
         double lh = strength.lambdaHome(home, away, neutral);
         double la = strength.lambdaAway(home, away, neutral);
         return ScoreGrid.dixonColes(lh, la, strength.rho());
+    }
+
+    @Override
+    public Optional<GoalRates> expectedGoals(String home, String away, boolean neutral) {
+        return Optional.of(new GoalRates(
+                strength.lambdaHome(home, away, neutral),
+                strength.lambdaAway(home, away, neutral)));
     }
 
     @Override

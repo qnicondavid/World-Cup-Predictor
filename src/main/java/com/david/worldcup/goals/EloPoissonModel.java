@@ -7,6 +7,7 @@ import com.david.worldcup.model.Match;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The lightweight option: reuse the existing Elo engine for team strength, then
@@ -90,11 +91,19 @@ public final class EloPoissonModel implements GoalModel {
 
     @Override
     public DrawModel.Probabilities probabilities(String home, String away, boolean neutral) {
+        GoalRates r = rates(home, away, neutral);
+        return ScoreGrid.independent(r.home(), r.away());
+    }
+
+    @Override
+    public Optional<GoalRates> expectedGoals(String home, String away, boolean neutral) {
+        return Optional.of(rates(home, away, neutral));
+    }
+
+    private GoalRates rates(String home, String away, boolean neutral) {
         double e = clamp(elo.winProbability(home, away, neutral));
         double sv = gap(e) / 100.0;
-        double lh = Math.exp(c0 + c1 * sv);
-        double la = Math.exp(c0 - c2 * sv);
-        return ScoreGrid.independent(lh, la);
+        return new GoalRates(Math.exp(c0 + c1 * sv), Math.exp(c0 - c2 * sv));
     }
 
     @Override

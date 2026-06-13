@@ -246,16 +246,20 @@ public final class Main {
         Path ledgerPath = Path.of("predictions/predictions.csv");
         Path readmePath = Path.of("README.md");
 
-        // Train on everything that has been played.
+        // Train on everything that has been played (Elo still drives the title-odds simulation).
         EloRatingSystem elo = new EloRatingSystem();
         matches.forEach(elo::processMatch);
+
+        // Production prediction model: Dixon-Coles, the best performer in the held-out
+        // comparison, fit on all history as of today.
+        DixonColesModel predictionModel = DixonColesModel.fit(matches, today);
 
         // Lock predictions for upcoming World Cup fixtures not yet in the ledger.
         List<Fixture> fixtures = new MatchCsvParser().parseFixtures(csv);
         List<PredictionLedger.Prediction> ledger =
                 new ArrayList<>(PredictionLedger.load(ledgerPath));
         List<PredictionLedger.Prediction> added =
-                Tracker.lockNewPredictions(elo, fixtures, ledger, today);
+                Tracker.lockNewPredictions(predictionModel, fixtures, ledger, today);
         ledger.addAll(added);
         ledger.sort(Comparator.comparing(PredictionLedger.Prediction::matchDate));
         PredictionLedger.save(ledgerPath, ledger);

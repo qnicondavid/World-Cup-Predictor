@@ -1,6 +1,7 @@
 package com.david.worldcup.tracker;
 
 import com.david.worldcup.elo.EloRatingSystem;
+import com.david.worldcup.goals.EloDrawBaselineModel;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 import com.david.worldcup.tracker.PredictionLedger.Prediction;
@@ -32,7 +33,7 @@ class TrackerTest {
                 new Prediction(TODAY.plusDays(1), "A", "B", true, 0.5, TODAY)); // already locked
 
         List<Prediction> added = Tracker.lockNewPredictions(
-                new EloRatingSystem(), fixtures, ledger, TODAY);
+                new EloDrawBaselineModel(new EloRatingSystem()), fixtures, ledger, TODAY);
 
         assertEquals(1, added.size());
         assertEquals("C", added.get(0).homeTeam());
@@ -105,6 +106,20 @@ class TrackerTest {
         PredictionLedger.save(tmp, original);
         List<Prediction> loaded = PredictionLedger.load(tmp);
         assertEquals(original, loaded);
+        assertFalse(loaded.get(0).hasExpectedGoals()); // no goals locked -> blank, reads back NaN
+        Files.deleteIfExists(tmp);
+    }
+
+    @Test
+    void expectedGoalsRoundTripWhenLocked() throws Exception {
+        Path tmp = Files.createTempFile("ledger-xg", ".csv");
+        List<Prediction> original = List.of(new Prediction(
+                TODAY, "Brazil", "Morocco", true, 0.5038, 0.2461, 0.2501, 1.6000, 1.1000, TODAY));
+        PredictionLedger.save(tmp, original);
+        List<Prediction> loaded = PredictionLedger.load(tmp);
+        assertEquals(original, loaded);
+        assertTrue(loaded.get(0).hasExpectedGoals());
+        assertEquals(1.6000, loaded.get(0).xgHome(), EPSILON);
         Files.deleteIfExists(tmp);
     }
 

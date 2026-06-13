@@ -1,7 +1,7 @@
 package com.david.worldcup.tracker;
 
 import com.david.worldcup.elo.DrawModel;
-import com.david.worldcup.elo.EloRatingSystem;
+import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.ScorePredictor;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -41,8 +42,11 @@ public final class Tracker {
     public record ScoredPrediction(Prediction prediction, Match result,
                                    boolean correct, double brier) {}
 
-    /** Predictions for World Cup fixtures on/after {@code today} that are not in the ledger yet. */
-    public static List<Prediction> lockNewPredictions(EloRatingSystem elo,
+    /**
+     * Predictions for World Cup fixtures on/after {@code today} that are not in the ledger yet,
+     * locked with the supplied {@link GoalModel} (Dixon-Coles in production).
+     */
+    public static List<Prediction> lockNewPredictions(GoalModel model,
                                                       List<Fixture> fixtures,
                                                       List<Prediction> ledger,
                                                       LocalDate today) {
@@ -56,10 +60,15 @@ public final class Tracker {
                 .filter(fx -> !fx.date().isBefore(today))
                 .filter(fx -> !alreadyLocked.contains(key(fx.date(), fx.homeTeam(), fx.awayTeam())))
                 .map(fx -> {
-                    DrawModel.Probabilities p = elo.outcomeProbabilities(
+                    DrawModel.Probabilities p = model.probabilities(
                             fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
+                    Optional<GoalModel.GoalRates> g = model.expectedGoals(
+                            fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
+                    double xgHome = g.map(GoalModel.GoalRates::home).orElse(Double.NaN);
+                    double xgAway = g.map(GoalModel.GoalRates::away).orElse(Double.NaN);
                     return new Prediction(fx.date(), fx.homeTeam(), fx.awayTeam(),
-                            fx.neutralVenue(), p.homeWin(), p.draw(), p.awayWin(), today);
+                            fx.neutralVenue(), p.homeWin(), p.draw(), p.awayWin(),
+                            xgHome, xgAway, today);
                 })
                 .sorted(Comparator.comparing(Prediction::matchDate))
                 .toList();
@@ -171,8 +180,14 @@ public final class Tracker {
                 100 * p.pHome(), 100 * p.pDraw(), 100 * p.pAway());
     }
 
-    /** Predicted scoreline, derived from the same Elo gap that produced the pick. */
+    /**
+     * Predicted scoreline. Uses the goal model's locked expected goals when present;
+     * otherwise falls back to the Elo-gap mapping implied by the win/draw/loss split.
+     */
     private static ScorePredictor.PredictedScore predictedScore(Prediction p) {
+        if (p.hasExpectedGoals()) {
+            return ScorePredictor.fromExpectedGoals(p.xgHome(), p.xgAway());
+        }
         return ScorePredictor.fromExpectedScore(p.pHome() + p.pDraw() / 2.0);
     }
 

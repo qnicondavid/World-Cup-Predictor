@@ -10,8 +10,10 @@ tournament unfolds.
 ## 2026 prediction accuracy (live)
 
 A GitHub Action runs daily: it pulls fresh results, locks predictions for
-upcoming fixtures using current ratings, scores completed ones, and updates
-this section automatically.
+upcoming fixtures with the **Dixon-Coles goal model** (the best performer in the
+held-out comparison below), scores completed ones, and updates this section
+automatically. Predictions locked earlier under the Elo model are preserved
+unchanged — a prediction is never re-locked once it has been made.
 
 <!-- TRACKER:START -->
 _Updated 2026-06-13 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._

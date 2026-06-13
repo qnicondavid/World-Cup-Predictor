@@ -6,6 +6,7 @@ import com.david.worldcup.model.Match;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Bivariate Poisson goal model. It reuses the Dixon-Coles attack/defence fit for
@@ -83,6 +84,13 @@ public final class BivariatePoissonModel implements GoalModel {
         double lh = strength.lambdaHome(home, away, neutral);
         double la = strength.lambdaAway(home, away, neutral);
         return ScoreGrid.bivariate(lh, la, lambda3);
+    }
+
+    @Override
+    public Optional<GoalRates> expectedGoals(String home, String away, boolean neutral) {
+        return Optional.of(new GoalRates(
+                strength.lambdaHome(home, away, neutral),
+                strength.lambdaAway(home, away, neutral)));
     }
 
     @Override

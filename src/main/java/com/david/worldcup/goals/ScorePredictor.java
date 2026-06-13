@@ -41,6 +41,12 @@ public final class ScorePredictor {
     private ScorePredictor() {
     }
 
+    /** Builds a predicted scoreline directly from a model's expected goals. */
+    public static PredictedScore fromExpectedGoals(double homeGoals, double awayGoals) {
+        return new PredictedScore(homeGoals, awayGoals,
+                ScoreGrid.mode(homeGoals), ScoreGrid.mode(awayGoals));
+    }
+
     /** Predicts a scoreline from an Elo expected score (E = P(win) + P(draw)/2). */
     public static PredictedScore fromExpectedScore(double expectedScore) {
         double e = Math.max(1e-6, Math.min(1 - 1e-6, expectedScore));
