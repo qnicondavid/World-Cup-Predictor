@@ -8,7 +8,9 @@ import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.elo.Tuner;
 import com.david.worldcup.elo.DrawModel;
 import com.david.worldcup.goals.BivariatePoissonModel;
+import com.david.worldcup.goals.Calibration;
 import com.david.worldcup.goals.DixonColesModel;
+import com.david.worldcup.goals.ValueAdjuster;
 import com.david.worldcup.goals.EloDrawBaselineModel;
 import com.david.worldcup.goals.EloPoissonModel;
 import com.david.worldcup.goals.EnsembleModel;
@@ -16,6 +18,11 @@ import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.GoalModelBacktest;
 import com.david.worldcup.goals.ValueTuner;
 import com.david.worldcup.goals.ValueWeights;
+import com.david.worldcup.betting.BettingConfig;
+import com.david.worldcup.betting.Odds;
+import com.david.worldcup.betting.OddsTable;
+import com.david.worldcup.betting.ValueBet;
+import com.david.worldcup.betting.ValueBetting;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 import com.david.worldcup.rest.RestBacktest;
@@ -33,6 +40,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * CLI entry point.
@@ -72,6 +80,10 @@ public final class Main {
             runGoalComparison(matches);
         } else if (arguments.contains("--rest")) {
             runRest(matches);
+        } else if (arguments.contains("--bets")) {
+            runBets(matches, csv);
+        } else if (arguments.contains("--calibrate")) {
+            runCalibration(matches);
         } else if (arguments.contains("--values-tune")) {
             runValuesTune(matches);
         } else if (arguments.contains("--values")) {
@@ -175,6 +187,116 @@ public final class Main {
 
         System.out.println();
         System.out.println("Reference: uniform thirds = multiclass Brier 0.667.");
+    }
+
+    private static void runBets(List<Match> matches, Path csv) throws IOException {
+        System.out.println("=== Value bets vs the book (mock odds) ===");
+        OddsTable odds = OddsTable.load(Path.of("data/odds_sample.csv"));
+        if (odds.isEmpty()) {
+            System.out.println("No data/odds_sample.csv found.");
+            return;
+        }
+        LocalDate today = LocalDate.now();
+
+        // Same production model as the live tracker: Dixon-Coles + tuned value prior.
+        MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
+        DixonColesModel model = values.isEmpty()
+                ? DixonColesModel.fit(matches, today)
+                : DixonColesModel.fitWithValues(matches, today, values, ValueWeights.DEFAULT);
+
+        List<Fixture> upcoming = new MatchCsvParser().parseFixtures(csv).stream()
+                .filter(Fixture::isWorldCupFinals)
+                .filter(f -> !f.date().isBefore(today))
+                .sorted(Comparator.comparing(Fixture::date))
+                .toList();
+
+        BettingConfig config = BettingConfig.DEFAULT;
+        System.out.printf(Locale.ROOT,
+                "Staking: min edge %.0f%%, %.2f Kelly, max %.0f%% of bankroll. Mock odds — "
+                        + "wire a live feed for real use.%n%n",
+                100 * config.minEdge(), config.kellyFraction(), 100 * config.maxStakeFraction());
+        System.out.printf(Locale.ROOT, "%-10s %-32s %-14s %6s %6s %6s %6s %6s%n",
+                "Date", "Match", "Bet", "model", "fair", "odds", "edge", "stake");
+
+        int bets = 0;
+        for (Fixture f : upcoming) {
+            Optional<Odds> o = odds.oddsFor(f.date(), f.homeTeam(), f.awayTeam());
+            if (o.isEmpty()) {
+                continue;
+            }
+            DrawModel.Probabilities p =
+                    model.probabilities(f.homeTeam(), f.awayTeam(), f.neutralVenue());
+            Optional<ValueBet> bet = ValueBetting.evaluate(
+                    new double[] {p.homeWin(), p.draw(), p.awayWin()}, o.get(), config);
+            if (bet.isEmpty()) {
+                continue;
+            }
+            ValueBet vb = bet.get();
+            bets++;
+            System.out.printf(Locale.ROOT, "%-10s %-32s %-14s %5.0f%% %5.0f%% %6.2f %5.1f%% %5.1f%%%n",
+                    f.date(), f.homeTeam() + " vs " + f.awayTeam(), vb.outcomeLabel(),
+                    100 * vb.modelProbability(), 100 * vb.fairProbability(), vb.offeredOdds(),
+                    100 * vb.expectedValue(), 100 * vb.stakeFraction());
+        }
+        if (bets == 0) {
+            System.out.println("No +EV bets at these odds.");
+        }
+    }
+
+    private static void runCalibration(List<Match> matches) throws IOException {
+        System.out.println("=== Calibration audit: production model on held-out World Cups ===");
+        MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
+        ValueTuner tuner = new ValueTuner(12, values);
+        Backtest.Window wc2022 = Backtest.WORLD_CUPS.get(4);
+
+        List<Calibration.Outcome> all = new ArrayList<>();
+        List<Calibration.Outcome> tuning = new ArrayList<>();   // 2006-2018
+        List<Calibration.Outcome> validation = new ArrayList<>(); // 2022
+        for (Backtest.Window w : Backtest.WORLD_CUPS) {
+            ValueTuner.Prepared p = tuner.prepare(matches, w);
+            var strength = values.isEmpty() ? p.base()
+                    : ValueAdjuster.adjust(p.base(), p.counts(), values, p.asof(), ValueWeights.DEFAULT);
+            DixonColesModel model = new DixonColesModel(strength);
+            for (Match m : p.test()) {
+                DrawModel.Probabilities pr =
+                        model.probabilities(m.homeTeam(), m.awayTeam(), m.neutralVenue());
+                int actual = switch (m.outcome()) {
+                    case HOME_WIN -> 0;
+                    case DRAW -> 1;
+                    case AWAY_WIN -> 2;
+                };
+                Calibration.Outcome o =
+                        new Calibration.Outcome(new double[] {pr.homeWin(), pr.draw(), pr.awayWin()}, actual);
+                all.add(o);
+                (w.equals(wc2022) ? validation : tuning).add(o);
+            }
+        }
+
+        System.out.printf(Locale.ROOT,
+                "Across %d held-out matches: log-loss %.4f, multiclass Brier %.4f, ECE %.4f%n%n",
+                all.size(), Calibration.logLoss(all), Calibration.brier(all),
+                Calibration.expectedCalibrationError(all, 10));
+        System.out.println("Reliability (one-vs-rest, by predicted probability):");
+        System.out.printf(Locale.ROOT, "%-13s %10s %10s %8s%n", "bin", "predicted", "observed", "n");
+        for (Calibration.Bin b : Calibration.reliability(all, 10)) {
+            System.out.printf(Locale.ROOT, "%4.0f-%3.0f%%     %9.1f%% %9.1f%% %8d%n",
+                    100 * b.low(), 100 * b.high(),
+                    100 * b.meanPredicted(), 100 * b.observedFrequency(), b.count());
+        }
+
+        double t = Calibration.fitTemperature(tuning);
+        System.out.println();
+        System.out.printf(Locale.ROOT,
+                "Fitted temperature on 2006-2018: T=%.2f (>1 softens overconfidence, <1 sharpens).%n", t);
+        System.out.printf(Locale.ROOT, "Held-out 2022 log-loss: raw %.4f -> tempered %.4f%n",
+                Calibration.logLoss(validation),
+                Calibration.logLoss(Calibration.rescale(validation, t)));
+        System.out.printf(Locale.ROOT, "Held-out 2022 Brier:    raw %.4f -> tempered %.4f%n",
+                Calibration.brier(validation),
+                Calibration.brier(Calibration.rescale(validation, t)));
+        System.out.printf(Locale.ROOT, "Held-out 2022 ECE:      raw %.4f -> tempered %.4f%n",
+                Calibration.expectedCalibrationError(validation, 10),
+                Calibration.expectedCalibrationError(Calibration.rescale(validation, t), 10));
     }
 
     private static void runValuesTune(List<Match> matches) throws IOException {

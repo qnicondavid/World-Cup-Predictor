@@ -118,6 +118,8 @@ mvn compile exec:java -Dexec.args="--goals"      # goal models vs Elo: held-out 
 mvn compile exec:java -Dexec.args="--rest"       # does a rest-days edge improve the model?
 mvn compile exec:java -Dexec.args="--values"     # does squad market value improve the model?
 mvn compile exec:java -Dexec.args="--values-tune" # grid-search the market-value prior weights
+mvn compile exec:java -Dexec.args="--calibrate"  # reliability / log-loss audit + temperature fit
+mvn compile exec:java -Dexec.args="--bets"       # value bets vs bookmaker odds (mock odds)
 ```
 
 (PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)
@@ -274,6 +276,44 @@ needs the historical snapshots that `research/build_market_values.py` produces.
 At default weights the untuned prior was a wash (Brier 0.575 vs 0.574); the
 improvement comes only after tuning, and only from the global blend — the
 sparse-team lever, intuitive as it was, earned nothing at World Cup level.
+
+## Value betting (toward beating the book)
+
+A well-calibrated model only has *value* if it disagrees with the market. `--bets`
+closes that loop: it reads bookmaker odds from `data/odds_sample.csv`
+(`match_date,home_team,away_team,home_odds,draw_odds,away_odds`, decimal), strips
+the overround to fair probabilities, and for each upcoming fixture compares the
+production model's win/draw/loss probabilities to the price. When an outcome's
+expected value (`model_probability × odds − 1`) clears a threshold it is flagged
+as a bet and sized by fractional Kelly.
+
+The default policy (`BettingConfig`) is deliberately conservative — a 5% edge
+floor, quarter-Kelly, capped at 5% of bankroll — because the calibration audit
+showed the model's confidence drifts between tournaments, so thin edges are not
+worth chasing. `ValueBetting.settle` scores a bet against the actual result, the
+building block for forward-tracked ROI.
+
+The shipped odds file is **mock** data for demonstration. For real use, wire a
+live feed (e.g. The Odds API free tier) into an `OddsTable` and, to validate
+honestly, lock each flagged bet at its pre-kickoff price in the ledger and track
+ROI forward — the same never-edited, git-proven discipline as the predictions.
+Historical international closing odds barely exist, so forward-testing, not
+backtesting, is the credible path here.
+
+## Calibration
+
+`--calibrate` audits the production model on the held-out World Cups: reliability
+bins (predicted vs. observed frequency), log-loss, multiclass Brier and expected
+calibration error (ECE), plus a temperature fit (tuned on 2006-2018, validated on
+2022). The finding: the model is mildly **under-confident** — favorites win a bit
+more often than it predicts and longshots a bit less (ECE ≈ 0.06). A fitted
+temperature would sharpen the probabilities, and it helps in-sample — but it
+makes **held-out 2022 worse on every metric** (the upset-heavy tournament punished
+extra confidence in favorites). The calibration direction is not stable across
+tournaments, so no temperature is applied: the raw probabilities ship as-is. The
+practical consequence for any betting layer is to demand a margin of safety and
+size conservatively, since the edge you compute rests on calibration that wobbles
+year to year.
 
 ## Rest-days differential (experimental)
 
