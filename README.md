@@ -22,7 +22,7 @@ Predictions locked earlier under the Elo model are preserved unchanged — a
 prediction is never re-locked once it has been made.
 
 <!-- TRACKER:START -->
-_Updated 2026-06-22 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._
+_Updated 2026-06-23 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._
 
 **Record: 21/38 picks correct (55.3%) — multiclass Brier 0.629 — mean goal error 2.1** (uniform guess = 0.667)
 
@@ -84,7 +84,7 @@ The model's title picks from 10,000 Monte Carlo simulations of the rest of the
 tournament, refreshed daily by the same Action.
 
 <!-- TITLE:START -->
-_The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-22. They inherit the simulator's simplifications (Elo tie-breaks, seeded knockout pairings, knockout games as neutral with no draws), so read them as the model's view, not a hard forecast._
+_The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-23. They inherit the simulator's simplifications (Elo tie-breaks, seeded knockout pairings, knockout games as neutral with no draws), so read them as the model's view, not a hard forecast._
 
 | # | Team | Title | Final | Semis |
 |---|---|---|---|---|
