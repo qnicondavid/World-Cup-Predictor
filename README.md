@@ -22,20 +22,12 @@ Predictions locked earlier under the Elo model are preserved unchanged — a
 prediction is never re-locked once it has been made.
 
 <!-- TRACKER:START -->
-_Updated 2026-06-23 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._
+_Updated 2026-06-24 — predictions are locked before kickoff and never edited; the git history of `predictions/predictions.csv` is the proof. Each pick is the model's most likely outcome and the H/D/A column its full home-win / draw / away-win split; the predicted score is the most likely scoreline (expected goals in brackets), and Δ is the total goal difference from the actual result (🎯 = exact). Brier is multiclass._
 
-**Record: 21/38 picks correct (55.3%) — multiclass Brier 0.629 — mean goal error 2.1** (uniform guess = 0.667)
+**Record: 28/46 picks correct (60.9%) — multiclass Brier 0.583 — mean goal error 2.0** (uniform guess = 0.667)
 
 | Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |
 |---|---|---|---|---|---|---|---|
-| Jun 18 | Mexico vs South Korea | Mexico | 54/26/20% | 1-0 (1.8–1.0) | 1-0 | 0 🎯 | ✅ |
-| Jun 18 | Switzerland vs Bosnia and Herzegovina | Switzerland | 76/18/6% | 2-0 (2.8–0.6) | 4-1 | 3 | ✅ |
-| Jun 18 | Canada vs Qatar | Canada | 85/12/3% | 3-0 (3.6–0.5) | 6-0 | 3 | ✅ |
-| Jun 19 | Scotland vs Morocco | Morocco | 17/25/58% | 0-1 (0.9–1.9) | 0-1 | 0 🎯 | ✅ |
-| Jun 19 | Brazil vs Haiti | Brazil | 84/13/3% | 3-0 (3.4–0.5) | 3-0 | 0 🎯 | ✅ |
-| Jun 19 | United States vs Australia | United States | 38/30/32% | 1-1 (1.4–1.2) | 2-0 | 2 | ✅ |
-| Jun 19 | Turkey vs Paraguay | Turkey | 46/28/26% | 1-1 (1.5–1.1) | 0-1 | 1 | ❌ |
-| Jun 20 | Germany vs Ivory Coast | Germany | 63/24/12% | 2-0 (2.1–0.8) | 2-1 | 1 | ✅ |
 | Jun 20 | Ecuador vs Curaçao | Ecuador | 87/11/2% | 3-0 (3.9–0.4) | 0-0 | 3 | ❌ |
 | Jun 20 | Netherlands vs Sweden | Netherlands | 68/22/10% | 2-0 (2.3–0.7) | 5-1 | 4 | ✅ |
 | Jun 20 | Tunisia vs Japan | Japan | 8/19/73% | 0-2 (0.7–2.6) | 0-4 | 2 | ✅ |
@@ -43,21 +35,29 @@ _Updated 2026-06-23 — predictions are locked before kickoff and never edited; 
 | Jun 21 | New Zealand vs Egypt | Egypt | 22/27/52% | 0-1 (1.0–1.7) | 1-3 | 3 | ✅ |
 | Jun 21 | Spain vs Saudi Arabia | Spain | 91/8/2% | 4-0 (4.5–0.4) | 4-0 | 0 🎯 | ✅ |
 | Jun 21 | Uruguay vs Cape Verde | Uruguay | 77/18/6% | 2-0 (2.8–0.6) | 2-2 | 2 | ❌ |
+| Jun 22 | France vs Iraq | France | 84/13/3% | 3-0 (3.4–0.5) | 3-0 | 0 🎯 | ✅ |
+| Jun 22 | Norway vs Senegal | Norway | 48/28/24% | 1-1 (1.6–1.1) | 3-2 | 3 | ✅ |
+| Jun 22 | Argentina vs Austria | Argentina | 71/20/9% | 2-0 (2.4–0.7) | 2-0 | 0 🎯 | ✅ |
+| Jun 22 | Jordan vs Algeria | Algeria | 17/25/58% | 0-1 (0.9–1.9) | 1-2 | 2 | ✅ |
+| Jun 23 | Portugal vs Uzbekistan | Portugal | 68/22/10% | 2-0 (2.3–0.7) | 5-0 | 3 | ✅ |
+| Jun 23 | Colombia vs DR Congo | Colombia | 76/18/6% | 2-0 (2.8–0.6) | 1-0 | 1 | ✅ |
+| Jun 23 | England vs Ghana | England | 88/10/2% | 4-0 (4.0–0.4) | 0-0 | 4 | ❌ |
+| Jun 23 | Panama vs Croatia | Croatia | 15/25/60% | 0-1 (0.9–2.0) | 0-1 | 0 🎯 | ✅ |
 
 **Locked for upcoming matches:**
 
 | Date | Match | Pick | H/D/A | Pred (xG) |
 |---|---|---|---|---|
-| Jun 22 | France vs Iraq | France | 84/13/3% | 3-0 (3.4–0.5) |
-| Jun 22 | Norway vs Senegal | Norway | 48/28/24% | 1-1 (1.6–1.1) |
-| Jun 22 | Argentina vs Austria | Argentina | 71/20/9% | 2-0 (2.4–0.7) |
-| Jun 22 | Jordan vs Algeria | Algeria | 17/25/58% | 0-1 (0.9–1.9) |
-| Jun 23 | Portugal vs Uzbekistan | Portugal | 68/22/10% | 2-0 (2.3–0.7) |
-| Jun 23 | Colombia vs DR Congo | Colombia | 76/18/6% | 2-0 (2.8–0.6) |
-| Jun 23 | England vs Ghana | England | 88/10/2% | 4-0 (4.0–0.4) |
-| Jun 23 | Panama vs Croatia | Croatia | 15/25/60% | 0-1 (0.9–2.0) |
 | Jun 24 | Mexico vs Czech Republic | Mexico | 65/23/11% | 2-0 (2.2–0.8) |
 | Jun 24 | South Africa vs South Korea | South Korea | 9/20/70% | 0-2 (0.7–2.4) |
+| Jun 24 | Canada vs Switzerland | Switzerland | 34/30/36% | 1-1 (1.3–1.3) |
+| Jun 24 | Bosnia and Herzegovina vs Qatar | Bosnia and Herzegovina | 52/27/21% | 1-0 (1.7–1.0) |
+| Jun 24 | Scotland vs Brazil | Brazil | 11/23/66% | 0-2 (0.8–2.2) |
+| Jun 24 | Morocco vs Haiti | Morocco | 78/17/5% | 2-0 (2.9–0.6) |
+| Jun 25 | United States vs Turkey | Turkey | 27/28/45% | 1-1 (1.1–1.5) |
+| Jun 25 | Paraguay vs Australia | Paraguay | 37/30/33% | 1-1 (1.3–1.3) |
+| Jun 25 | Curaçao vs Ivory Coast | Ivory Coast | 9/20/71% | 0-2 (0.7–2.5) |
+| Jun 25 | Ecuador vs Germany | Germany | 33/30/38% | 1-1 (1.2–1.4) |
 
 <!-- TRACKER:END -->
 
@@ -84,26 +84,26 @@ The model's title picks from 10,000 Monte Carlo simulations of the rest of the
 tournament, refreshed daily by the same Action.
 
 <!-- TITLE:START -->
-_The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-23. They inherit the simulator's simplifications (Elo tie-breaks, seeded knockout pairings, knockout games as neutral with no draws), so read them as the model's view, not a hard forecast._
+_The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-24. They inherit the simulator's simplifications (Elo tie-breaks, seeded knockout pairings, knockout games as neutral with no draws), so read them as the model's view, not a hard forecast._
 
 | # | Team | Title | Final | Semis |
 |---|---|---|---|---|
-| 1 | Argentina | 23.0% | 35.1% | 50.0% |
-| 2 | Spain | 15.6% | 26.2% | 42.0% |
-| 3 | France | 14.4% | 25.1% | 40.6% |
-| 4 | England | 8.7% | 17.5% | 32.7% |
-| 5 | Colombia | 5.3% | 11.6% | 23.2% |
-| 6 | Brazil | 5.1% | 11.3% | 23.2% |
-| 7 | Germany | 4.8% | 10.8% | 23.0% |
-| 8 | Netherlands | 4.5% | 10.0% | 20.2% |
-| 9 | Japan | 2.9% | 6.7% | 15.8% |
-| 10 | Morocco | 2.8% | 6.7% | 14.8% |
-| 11 | Portugal | 2.4% | 5.7% | 12.3% |
-| 12 | Mexico | 2.1% | 6.2% | 15.2% |
-| 13 | Norway | 1.8% | 4.9% | 12.3% |
-| 14 | United States | 1.1% | 3.5% | 10.6% |
-| 15 | Switzerland | 1.0% | 3.1% | 9.1% |
-| 16 | Belgium | 0.9% | 2.7% | 8.0% |
+| 1 | Argentina | 25.3% | 37.6% | 53.7% |
+| 2 | Spain | 15.1% | 25.5% | 41.9% |
+| 3 | France | 14.2% | 25.0% | 40.4% |
+| 4 | England | 6.4% | 13.9% | 27.1% |
+| 5 | Colombia | 6.3% | 13.6% | 26.1% |
+| 6 | Brazil | 5.5% | 11.3% | 22.3% |
+| 7 | Germany | 4.3% | 10.0% | 21.8% |
+| 8 | Netherlands | 3.8% | 9.0% | 18.4% |
+| 9 | Portugal | 3.5% | 8.3% | 17.7% |
+| 10 | Japan | 2.9% | 6.6% | 15.7% |
+| 11 | Morocco | 2.5% | 6.9% | 15.8% |
+| 12 | Norway | 2.4% | 6.3% | 14.1% |
+| 13 | Mexico | 1.8% | 5.1% | 14.0% |
+| 14 | United States | 1.0% | 3.2% | 10.0% |
+| 15 | Belgium | 1.0% | 3.0% | 8.2% |
+| 16 | Croatia | 0.9% | 2.4% | 7.0% |
 
 <!-- TITLE:END -->
 
