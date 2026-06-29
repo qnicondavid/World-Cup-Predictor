@@ -7,7 +7,7 @@ international football results (49,000+ matches, 1872–present). Predictions ar
 served from a **Dixon-Coles goal model** with a squad market-value prior, locked
 before kickoff, and scored against real results as the tournament unfolds. The
 longer-term aim is the hard one: probabilities good enough to **beat the
-bookmaker's closing line**, honestly verified.
+bookmaker's closing line**.
 
 **Live demo: [qnicondavid.github.io/world-cup-predictor](https://qnicondavid.github.io/world-cup-predictor/)**
 
