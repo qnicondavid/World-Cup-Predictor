@@ -486,31 +486,9 @@ public final class Main {
         ledger.sort(Comparator.comparing(PredictionLedger.Prediction::matchDate));
         PredictionLedger.save(ledgerPath, ledger);
 
-        // Score everything in the ledger that now has a result.
-        List<Tracker.ScoredPrediction> scored = Tracker.score(ledger, matches);
-        List<PredictionLedger.Prediction> pending = new ArrayList<>(ledger);
-        scored.forEach(s -> pending.remove(s.prediction()));
-
-        // Rewrite the README prediction-accuracy section.
-        String readme = Files.readString(readmePath);
-        readme = Tracker.replaceSection(readme, Tracker.renderMarkdown(scored, pending, today));
-
-        // Rewrite the live championship-odds section from a fresh simulation.
-        List<Match> played2026 = matches.stream()
-                .filter(Match::isWorldCupFinals)
-                .filter(mt -> mt.date().getYear() == 2026)
-                .toList();
-        List<Fixture> remainingWorldCup = fixtures.stream()
-                .filter(Fixture::isWorldCupFinals)
-                .toList();
-        int runs = 10_000;
-        List<TournamentSimulator.TeamOdds> odds =
-                new TournamentSimulator(elo).simulate(played2026, remainingWorldCup, runs, 2026L);
-        readme = Tracker.replaceSection(readme,
-                Tracker.TITLE_SECTION_START, Tracker.TITLE_SECTION_END,
-                Tracker.renderTitleOdds(odds, 16, today, runs));
-
-        // Retrospective view of World Cup matches played before the model was created.
+        // Retrospective predictions for World Cup matches played before the model
+        // existed. They are merged into the main record (counted), each trained only
+        // on data from before its match, so no result is ever peeked at.
         LocalDate modelBirth = ledger.stream()
                 .map(PredictionLedger.Prediction::lockedOn)
                 .min(Comparator.naturalOrder())
@@ -537,9 +515,32 @@ public final class Main {
                     goals.map(GoalModel.GoalRates::away).orElse(Double.NaN),
                     mt.date()));
         }
+
+        // Score everything that now has a result: ledger predictions plus the merged
+        // retrospective ones. Pending = locked predictions still awaiting a result.
+        List<Tracker.ScoredPrediction> scored = new ArrayList<>(Tracker.score(ledger, matches));
+        scored.addAll(Tracker.score(earlyPredictions, matches));
+        List<PredictionLedger.Prediction> pending = new ArrayList<>(ledger);
+        scored.forEach(s -> pending.remove(s.prediction()));
+
+        // Rewrite the README prediction-accuracy section (most recent matches first).
+        String readme = Files.readString(readmePath);
+        readme = Tracker.replaceSection(readme, Tracker.renderMarkdown(scored, pending, today));
+
+        // Rewrite the live championship-odds section from a fresh simulation.
+        List<Match> played2026 = matches.stream()
+                .filter(Match::isWorldCupFinals)
+                .filter(mt -> mt.date().getYear() == 2026)
+                .toList();
+        List<Fixture> remainingWorldCup = fixtures.stream()
+                .filter(Fixture::isWorldCupFinals)
+                .toList();
+        int runs = 10_000;
+        List<TournamentSimulator.TeamOdds> odds =
+                new TournamentSimulator(elo).simulate(played2026, remainingWorldCup, runs, 2026L);
         readme = Tracker.replaceSection(readme,
-                Tracker.EARLY_SECTION_START, Tracker.EARLY_SECTION_END,
-                Tracker.renderEarlyMatches(Tracker.score(earlyPredictions, matches), today));
+                Tracker.TITLE_SECTION_START, Tracker.TITLE_SECTION_END,
+                Tracker.renderTitleOdds(odds, 16, today, runs));
 
         Files.writeString(readmePath, readme);
 

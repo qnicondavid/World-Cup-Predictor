@@ -142,9 +142,10 @@ public final class Tracker {
                     correct, scored.size(), 100.0 * correct / scored.size(), brier, meanGoalError));
 
             md.append(RESOLVED_HEADER);
-            for (ScoredPrediction s : scored) {
-                appendResolvedRow(md, s);
-            }
+            scored.stream()
+                    .sorted(Comparator.comparing(
+                            (ScoredPrediction s) -> s.prediction().matchDate()).reversed())
+                    .forEach(s -> appendResolvedRow(md, s));
         }
 
         if (!pending.isEmpty()) {
