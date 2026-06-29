@@ -5,6 +5,7 @@ import com.david.worldcup.elo.EloRatingSystem;
 import com.david.worldcup.model.Fixture;
 import com.david.worldcup.model.Match;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,20 +20,31 @@ import java.util.TreeSet;
 /**
  * Monte Carlo simulation of the remainder of the 2026 World Cup.
  *
- * <p>Each run: replay the already-played group results, sample every remaining
- * group fixture from the model's win/draw/loss probabilities, build group
- * standings, qualify winners + runners-up + the best third-placed teams (filled
- * until the knockout field is a power of two — 8 thirds for the 12-group 2026
- * format), then sample the knockout bracket to a champion.
+ * <p>The simulator runs in one of two modes, chosen automatically from the
+ * remaining fixtures:
+ *
+ * <ul>
+ *   <li><b>Group stage</b> — when at least one team still has more than one
+ *       remaining fixture. Each run replays the played group results, samples
+ *       every remaining group fixture from the model's win/draw/loss
+ *       probabilities, builds group standings, qualifies winners + runners-up +
+ *       best thirds, then simulates a knockout bracket to a champion.</li>
+ *   <li><b>Knockout stage</b> — when every team has at most one remaining
+ *       fixture (single elimination). The remaining fixtures <em>are</em> the
+ *       bracket, so groups are no longer inferred. Each run samples the bracket
+ *       forward, round by round, to a champion.</li>
+ * </ul>
  *
  * <p>Documented simplifications:
  * <ul>
- *   <li>Group composition is inferred from the fixture list (teams that play
- *       each other in the group stage form a group) rather than hard-coded.</li>
- *   <li>Tie-breaks use points, then current Elo rating, instead of goal
- *       difference (outcomes are simulated, not scorelines).</li>
- *   <li>The knockout bracket is paired by seeding (best vs worst), which
- *       approximates FIFA's fixed bracket paths.</li>
+ *   <li>Group composition (group-stage mode) is inferred from the fixture list
+ *       (teams that play each other form a group) rather than hard-coded.</li>
+ *   <li>Tie-breaks (group-stage mode) use points, then current Elo rating,
+ *       instead of goal difference (outcomes are simulated, not scorelines).</li>
+ *   <li>The knockout bracket tree is built by pairing matches in schedule order
+ *       (the dataset only contains the current round, not the full tree), which
+ *       approximates FIFA's fixed bracket paths. A match already played in the
+ *       current round carries its real winner into the next round.</li>
  *   <li>Knockout matches are treated as neutral-venue with no draws: the Elo
  *       expected score is used directly as the win probability, which folds
  *       extra time and penalties into a single number.</li>
@@ -81,22 +93,53 @@ public final class TournamentSimulator {
         return groups;
     }
 
+    /**
+     * Knockout stage when every team appears in at most one remaining fixture
+     * (single elimination). During the group stage teams have several remaining
+     * fixtures, so this is false.
+     */
+    static boolean isKnockoutPhase(List<Fixture> remaining) {
+        if (remaining.isEmpty()) {
+            return false;
+        }
+        Map<String, Integer> appearances = new HashMap<>();
+        for (Fixture f : remaining) {
+            appearances.merge(f.homeTeam(), 1, Integer::sum);
+            appearances.merge(f.awayTeam(), 1, Integer::sum);
+        }
+        return appearances.values().stream().allMatch(v -> v <= 1);
+    }
+
     /** Runs {@code runs} simulations and returns per-team odds, best title odds first. */
     public List<TeamOdds> simulate(List<Match> playedGroupMatches,
                                    List<Fixture> remainingGroupFixtures,
                                    int runs, long seed) {
-        List<Set<String>> groups = inferGroups(playedGroupMatches, remainingGroupFixtures);
-        Random random = new Random(seed);
-
         Map<String, int[]> tally = new LinkedHashMap<>(); // {titles, finals, semis}
-        for (Set<String> g : groups) {
-            for (String t : g) {
-                tally.put(t, new int[3]);
-            }
+        for (Match m : playedGroupMatches) {
+            tally.putIfAbsent(m.homeTeam(), new int[3]);
+            tally.putIfAbsent(m.awayTeam(), new int[3]);
+        }
+        for (Fixture f : remainingGroupFixtures) {
+            tally.putIfAbsent(f.homeTeam(), new int[3]);
+            tally.putIfAbsent(f.awayTeam(), new int[3]);
         }
 
-        for (int i = 0; i < runs; i++) {
-            runOnce(groups, playedGroupMatches, remainingGroupFixtures, random, tally);
+        Random random = new Random(seed);
+        if (isKnockoutPhase(remainingGroupFixtures)) {
+            List<String[]> slots = buildKnockoutSlots(playedGroupMatches, remainingGroupFixtures);
+            for (int i = 0; i < runs; i++) {
+                runKnockoutOnce(slots, random, tally);
+            }
+        } else {
+            List<Set<String>> groups = inferGroups(playedGroupMatches, remainingGroupFixtures);
+            for (Set<String> g : groups) {
+                for (String t : g) {
+                    tally.putIfAbsent(t, new int[3]);
+                }
+            }
+            for (int i = 0; i < runs; i++) {
+                runOnce(groups, playedGroupMatches, remainingGroupFixtures, random, tally);
+            }
         }
 
         List<TeamOdds> odds = new ArrayList<>();
@@ -109,6 +152,94 @@ public final class TournamentSimulator {
         odds.sort(Comparator.comparingDouble(TeamOdds::titleShare).reversed());
         return odds;
     }
+
+    // ---- Knockout stage ------------------------------------------------------
+
+    /**
+     * Builds the current knockout round as an ordered list of "slots". Each slot
+     * is either a fixture still to be played ({@code [home, away]}) or a team that
+     * already won its current-round match and is awaiting the next round
+     * ({@code [team]}). Slots are ordered by date so pairing them sequentially
+     * approximates the fixed bracket tree.
+     */
+    static List<String[]> buildKnockoutSlots(List<Match> played, List<Fixture> remaining) {
+        Set<String> inRemaining = new HashSet<>();
+        for (Fixture f : remaining) {
+            inRemaining.add(f.homeTeam());
+            inRemaining.add(f.awayTeam());
+        }
+
+        Map<String, Integer> games = new HashMap<>();
+        Map<String, Match> lastMatch = new HashMap<>();
+        for (Match m : played) {
+            for (String t : List.of(m.homeTeam(), m.awayTeam())) {
+                games.merge(t, 1, Integer::sum);
+                Match prev = lastMatch.get(t);
+                if (prev == null || m.date().isAfter(prev.date())) {
+                    lastMatch.put(t, m);
+                }
+            }
+        }
+
+        record Slot(LocalDate date, String[] teams) {}
+        List<Slot> ordered = new ArrayList<>();
+
+        // Carries: a team that has progressed past the group stage (>3 matches),
+        // won its latest match, and has no scheduled fixture is a pending winner.
+        for (Map.Entry<String, Integer> e : games.entrySet()) {
+            String t = e.getKey();
+            if (inRemaining.contains(t) || e.getValue() <= 3) {
+                continue;
+            }
+            Match lm = lastMatch.get(t);
+            boolean won = (lm.homeTeam().equals(t) && lm.outcome() == Match.Outcome.HOME_WIN)
+                    || (lm.awayTeam().equals(t) && lm.outcome() == Match.Outcome.AWAY_WIN);
+            if (won) {
+                ordered.add(new Slot(lm.date(), new String[] {t}));
+            }
+        }
+        for (Fixture f : remaining) {
+            ordered.add(new Slot(f.date(), new String[] {f.homeTeam(), f.awayTeam()}));
+        }
+        ordered.sort(Comparator.comparing(Slot::date));
+
+        List<String[]> slots = new ArrayList<>();
+        for (Slot s : ordered) {
+            slots.add(s.teams());
+        }
+        return slots;
+    }
+
+    private void runKnockoutOnce(List<String[]> slots, Random random, Map<String, int[]> tally) {
+        List<String> round = new ArrayList<>();
+        for (String[] s : slots) {
+            round.add(s.length == 1 ? s[0] : play(s[0], s[1], random));
+        }
+        while (round.size() > 1) {
+            if (round.size() == 4) {
+                round.forEach(t -> tally.get(t)[2]++);
+            }
+            if (round.size() == 2) {
+                round.forEach(t -> tally.get(t)[1]++);
+            }
+            List<String> next = new ArrayList<>();
+            for (int i = 0; i + 1 < round.size(); i += 2) {
+                next.add(play(round.get(i), round.get(i + 1), random));
+            }
+            if (round.size() % 2 == 1) {
+                next.add(round.get(round.size() - 1)); // odd field: last team gets a bye
+            }
+            round = next;
+        }
+        tally.get(round.get(0))[0]++;
+    }
+
+    /** Samples a single knockout match (neutral venue, no draws) from the Elo gap. */
+    private String play(String a, String b, Random random) {
+        return random.nextDouble() < elo.winProbability(a, b, true) ? a : b;
+    }
+
+    // ---- Group stage ---------------------------------------------------------
 
     private void runOnce(List<Set<String>> groups, List<Match> played,
                          List<Fixture> remaining, Random random, Map<String, int[]> tally) {

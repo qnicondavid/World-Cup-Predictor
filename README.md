@@ -128,26 +128,26 @@ The model's title picks from 10,000 Monte Carlo simulations of the rest of the
 tournament, refreshed daily by the same Action.
 
 <!-- TITLE:START -->
-The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-29. They inherit the simulator's simplifications (Elo tie-breaks, seeded knockout pairings, knockout games as neutral with no draws), so read them as the model's view, not a hard forecast.
+The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-29. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
 
 | # | Team | Title | Final | Semis |
 |---|---|---|---|---|
-| 1 | Argentina | 40.6% | 67.2% | 96.1% |
-| 2 | France | 29.3% | 56.9% | 89.3% |
-| 3 | England | 14.2% | 35.0% | 91.6% |
-| 4 | Colombia | 12.5% | 31.2% | 95.0% |
-| 5 | Mexico | 1.5% | 4.6% | 11.6% |
-| 6 | Spain | 0.8% | 1.4% | 2.2% |
-| 7 | Croatia | 0.5% | 1.8% | 8.5% |
-| 8 | Portugal | 0.5% | 1.5% | 4.9% |
-| 9 | Brazil | 0.1% | 0.3% | 0.4% |
-| 10 | Netherlands | 0.0% | 0.1% | 0.2% |
-| 11 | Switzerland | 0.0% | 0.0% | 0.1% |
-| 12 | Algeria | 0.0% | 0.0% | 0.0% |
-| 13 | Australia | 0.0% | 0.0% | 0.0% |
-| 14 | Austria | 0.0% | 0.0% | 0.0% |
-| 15 | Belgium | 0.0% | 0.0% | 0.0% |
-| 16 | Bosnia and Herzegovina | 0.0% | 0.0% | 0.0% |
+| 1 | Argentina | 25.1% | 38.1% | 56.9% |
+| 2 | France | 19.4% | 34.0% | 48.5% |
+| 3 | Spain | 15.7% | 25.9% | 45.5% |
+| 4 | England | 6.4% | 14.3% | 24.5% |
+| 5 | Brazil | 6.0% | 13.3% | 28.1% |
+| 6 | Colombia | 5.0% | 10.8% | 21.4% |
+| 7 | Netherlands | 3.1% | 7.8% | 17.8% |
+| 8 | Portugal | 3.0% | 6.7% | 16.1% |
+| 9 | Germany | 2.4% | 6.3% | 16.9% |
+| 10 | Morocco | 2.3% | 5.7% | 14.0% |
+| 11 | Belgium | 1.7% | 4.9% | 14.4% |
+| 12 | Japan | 1.7% | 4.7% | 12.2% |
+| 13 | Switzerland | 1.4% | 4.0% | 10.5% |
+| 14 | Mexico | 1.3% | 4.0% | 8.9% |
+| 15 | Norway | 1.3% | 3.8% | 8.4% |
+| 16 | Ecuador | 0.9% | 2.6% | 6.1% |
 
 <!-- TITLE:END -->
 
@@ -160,11 +160,11 @@ These are overall per-tournament results, not individual matches.
 
 | Tournament | Tuned model | Baseline |
 |---|---|---|
-| World Cup 2006 | 41/64 (64.1%), Brier 0.119 | 42/64 (65.6%), Brier 0.129 |
-| World Cup 2010 | 35/64 (54.7%), Brier 0.146 | 32/64 (50.0%), Brier 0.148 |
-| World Cup 2014 | 39/64 (60.9%), Brier 0.135 | 39/64 (60.9%), Brier 0.150 |
-| World Cup 2018 | 37/64 (57.8%), Brier 0.159 | 34/64 (53.1%), Brier 0.167 |
 | World Cup 2022 | 32/64 (50.0%), Brier 0.183 | 34/64 (53.1%), Brier 0.181 |
+| World Cup 2018 | 37/64 (57.8%), Brier 0.159 | 34/64 (53.1%), Brier 0.167 |
+| World Cup 2014 | 39/64 (60.9%), Brier 0.135 | 39/64 (60.9%), Brier 0.150 |
+| World Cup 2010 | 35/64 (54.7%), Brier 0.146 | 32/64 (50.0%), Brier 0.148 |
+| World Cup 2006 | 41/64 (64.1%), Brier 0.119 | 42/64 (65.6%), Brier 0.129 |
 | **Combined (320)** | **184/320 (57.5%), Brier 0.148** | 181/320 (56.6%), Brier 0.155 |
 | Coin-flip reference | 50%, Brier 0.250 | n/a |
 

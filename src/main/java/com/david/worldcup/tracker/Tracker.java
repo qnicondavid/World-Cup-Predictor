@@ -233,9 +233,9 @@ public final class Tracker {
         StringBuilder md = new StringBuilder();
         md.append(String.format(Locale.ROOT,
                 "The model's championship odds from %,d Monte Carlo simulations, updated %s. "
-                        + "They inherit the simulator's simplifications (Elo tie-breaks, seeded "
-                        + "knockout pairings, knockout games as neutral with no draws), so read "
-                        + "them as the model's view, not a hard forecast.%n%n", runs, today));
+                        + "They inherit the simulator's simplifications (knockout bracket paired "
+                        + "in schedule order, games as neutral with no draws), so read them as "
+                        + "the model's view, not a hard forecast.%n%n", runs, today));
         md.append("| # | Team | Title | Final | Semis |\n");
         md.append("|---|---|---|---|---|\n");
         int n = Math.min(topN, odds.size());
