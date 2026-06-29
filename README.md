@@ -1,4 +1,4 @@
-# World Cup Elo Predictor
+# World Cup Predictor
 
 ![CI](https://github.com/qnicondavid/World-Cup-Predictor/actions/workflows/ci.yml/badge.svg)
 
@@ -9,8 +9,7 @@ before kickoff, and scored against real results as the tournament unfolds. The
 longer-term aim is the hard one: probabilities good enough to **beat the
 bookmaker's closing line**, honestly verified.
 
-**▶ Live demo: [qnicondavid.github.io/World-Cup-Predictor](https://qnicondavid.github.io/World-Cup-Predictor/)** —
-daily-updated 2026 predictions, scored record, and Monte Carlo championship odds.
+**Live demo: [qnicondavid.github.io/World-Cup-Predictor](https://qnicondavid.github.io/World-Cup-Predictor/)**
 
 ## Live results
 
