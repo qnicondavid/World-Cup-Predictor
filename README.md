@@ -190,17 +190,17 @@ measured against.
 
 ## Why you can trust it
 
-**Held out, every time.** Every figure in the track record above comes from
+Every figure in the track record above comes from
 World Cups the model never trained on, predicting each match before its result,
 so nothing is fit to the games it is judged on. The live 2026 picks follow the
 same discipline.
 
-**Locked, never edited.** Live predictions are written to
+Live predictions are written to
 `predictions/predictions.csv` before kickoff and never changed; the git history
 is the audit trail. A prediction made under an older model is preserved as-is
 and never re-locked.
 
-**Negative findings are kept, not hidden.** Several intuitive ideas were tested
+Several intuitive ideas were tested
 honestly and did not earn their place, and they stay documented because that is
 why the rest can be believed:
 
