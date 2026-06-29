@@ -213,6 +213,42 @@ why the rest can be believed:
 What did survive: goal-margin scaling (combined Brier 0.148 vs 0.155) and a
 small, tuned squad-value prior.
 
+### More negative findings from goal-model research
+
+Three more ideas were tested on the five held-out World Cups (320 matches, 2006-2022)
+and did not clear the bar:
+
+- **Elo + Dixon-Coles ensemble blend**: leave-one-tournament-out cross-validation
+  drove the learned weight to near-pure Elo in every fold. The blend scored
+  +0.0007 worse than plain Elo on the held-out set (95% CI [0.0000, +0.0019]);
+  the confidence interval never favors the blend. Dead.
+- **Draw recalibration**: a multiplicative draw-probability scaling factor k
+  was tuned via LOTO-CV; it reverted to k=1.0 (no-op) every time, and
+  held-out Brier was unchanged. The model already over-weights draws
+  (mean predicted draw 0.283 vs observed base rate 0.225), so no
+  recalibration surface exists to exploit. Dead.
+- **Half-life retune**: longer decay half-lives (~3 years) lean slightly
+  better; pooled held-out Brier improved by roughly -0.003 (0.595 vs 0.598).
+  That delta is inside the approximately plus-or-minus 0.015 to 0.020 noise
+  floor implied by block-bootstrap CIs over five tournaments, so the change
+  is not adopted as a standalone improvement.
+
+A fourth idea showed real structure but was absorbed by the value prior. A
+cross-confederation strength correction estimates a per-confederation-pair
+goal-difference residual from training data and applies it to
+inter-confederation matchups. On the Python Dixon-Coles baseline (no value
+prior) it improved combined Brier by roughly -0.016 (95% CI excludes zero, all
+five World Cups negative, gain in resolution). But re-measured on the
+production model through the export bridge (--verify-export, scored with
+verify.py --score), the gain collapsed to about -0.005 with a 95% CI of
+[-0.012, +0.005] that spans zero, and one tournament reversed sign. The
+squad-value prior and confederation strength are partly redundant, since rich
+squads cluster in the strong confederations, so the prior already absorbs
+roughly two-thirds of the effect. Not adopted on the production model, where
+the residual sits inside the noise. The export bridge and verification harness
+(research/verify.py) built to settle this are kept, since every future idea is
+judged the same way.
+
 ## Methodology in depth
 
 ### Draw modelling
@@ -326,6 +362,7 @@ mvn compile exec:java -Dexec.args="--values"     # does squad market value impro
 mvn compile exec:java -Dexec.args="--values-tune" # grid-search the market-value prior weights
 mvn compile exec:java -Dexec.args="--calibrate"  # reliability / log-loss audit + temperature fit
 mvn compile exec:java -Dexec.args="--bets"       # value bets vs bookmaker odds (mock odds)
+mvn compile exec:java -Dexec.args="--verify-export" # write held-out predictions to research/export_predictions.csv
 ```
 
 (PowerShell: quote the whole flag, e.g. `mvn compile exec:java "-Dexec.args=--simulate"`.)

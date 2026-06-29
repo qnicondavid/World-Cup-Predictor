@@ -475,6 +475,63 @@ def main(csv_path=None):
     run_self_tests(dc_records, data)
 
 
+# ---------------------------------------------------------------------------
+# 10. score_export  (bridge consumer for Java --verify-export CSV)
+# ---------------------------------------------------------------------------
+def score_export(csv_path):
+    """
+    Load a CSV written by the Java --verify-export bridge and print Brier metrics.
+
+    Expected columns: tournament,home,away,date,p_home,p_draw,p_away,actual
+    actual in {home, draw, away}  ->  mapped to y in {0, 1, 2}.
+    """
+    import csv as csv_mod
+    actual_map = {"home": 0, "draw": 1, "away": 2}
+    records = []
+    with open(csv_path, newline="", encoding="utf-8") as fh:
+        reader = csv_mod.DictReader(fh)
+        for row in reader:
+            y_str = row["actual"].strip()
+            if y_str not in actual_map:
+                raise ValueError(f"Unknown actual value: {y_str!r}")
+            records.append(dict(
+                tournament=row["tournament"].strip(),
+                home=row["home"].strip(),
+                away=row["away"].strip(),
+                date=row["date"].strip(),
+                p=[float(row["p_home"]), float(row["p_draw"]), float(row["p_away"])],
+                y=actual_map[y_str],
+            ))
+    print(f"Loaded {len(records)} records from {csv_path}")
+    if not records:
+        print("No records; nothing to score.")
+        return
+
+    print(f"\n--- Combined Brier ---")
+    combined = brier(records)
+    print(f"  Combined ({len(records)} matches): {combined:.4f}")
+
+    print("\n--- Per-tournament Brier ---")
+    ptb = per_tournament_brier(records)
+    for t, b in ptb.items():
+        print(f"  {t}: {b:.4f}")
+
+    print("\n--- Murphy Decomposition ---")
+    dec = murphy_decomposition(records)
+    print(f"  Reliability:   {dec['reliability']:.4f}")
+    print(f"  Resolution:    {dec['resolution']:.4f}")
+    print(f"  Uncertainty:   {dec['uncertainty']:.4f}")
+    print(f"  Brier (check): {dec['brier']:.4f}")
+    print(f"  Residual:      {dec['residual']:.6f}")
+
+    print("\n--- Block-bootstrap 95% CI on combined Brier ---")
+    pt, lo, hi = block_bootstrap(records, brier)
+    print(f"  Point: {pt:.4f}  95% CI: [{lo:.4f}, {hi:.4f}]")
+
+
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else None
-    main(path)
+    if len(sys.argv) >= 3 and sys.argv[1] == "--score":
+        score_export(sys.argv[2])
+    else:
+        path = sys.argv[1] if len(sys.argv) > 1 else None
+        main(path)

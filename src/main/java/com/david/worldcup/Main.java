@@ -41,6 +41,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.io.PrintWriter;
+import java.io.FileWriter;
 
 /**
  * CLI entry point.
@@ -84,6 +86,8 @@ public final class Main {
             runBets(matches, csv);
         } else if (arguments.contains("--calibrate")) {
             runCalibration(matches);
+        } else if (arguments.contains("--verify-export")) {
+            runVerifyExport(matches);
         } else if (arguments.contains("--values-tune")) {
             runValuesTune(matches);
         } else if (arguments.contains("--values")) {
@@ -655,6 +659,42 @@ public final class Main {
                 teamB, elo.ratingOf(teamB),
                 p >= 0.5 ? teamA : teamB,
                 p >= 0.5 ? p : 1 - p);
+    }
+
+    private static void runVerifyExport(List<Match> matches) throws IOException {
+        System.out.println("=== Verify export: writing held-out per-match predictions to research/export_predictions.csv ===");
+        MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
+        ValueTuner tuner = new ValueTuner(12, values);
+
+        Path outPath = Path.of("research/export_predictions.csv");
+        try (PrintWriter pw = new PrintWriter(new FileWriter(outPath.toFile()))) {
+            pw.println("tournament,home,away,date,p_home,p_draw,p_away,actual");
+            for (Backtest.Window w : Backtest.WORLD_CUPS) {
+                ValueTuner.Prepared p = tuner.prepare(matches, w);
+                var strength = values.isEmpty() ? p.base()
+                        : ValueAdjuster.adjust(p.base(), p.counts(), values, p.asof(), ValueWeights.DEFAULT);
+                DixonColesModel model = new DixonColesModel(strength);
+                // Label matches the WINDOWS keys used in research/verify.py
+                String label = "WC" + w.from().getYear();
+                for (Match m : p.test()) {
+                    DrawModel.Probabilities pr =
+                            model.probabilities(m.homeTeam(), m.awayTeam(), m.neutralVenue());
+                    String actual = switch (m.outcome()) {
+                        case HOME_WIN -> "home";
+                        case DRAW    -> "draw";
+                        case AWAY_WIN -> "away";
+                    };
+                    pw.printf(Locale.ROOT, "%s,%s,%s,%s,%.8f,%.8f,%.8f,%s%n",
+                            label,
+                            m.homeTeam().replace(",", ";"),
+                            m.awayTeam().replace(",", ";"),
+                            m.date(),
+                            pr.homeWin(), pr.draw(), pr.awayWin(),
+                            actual);
+                }
+            }
+        }
+        System.out.printf("Written %s%n", outPath.toAbsolutePath());
     }
 
     private Main() {
