@@ -1,0 +1,359 @@
+[
+{
+"date": "2026-06-13",
+"odds": {
+"Spain": 22.2,
+"Argentina": 20.2,
+"France": 11.1,
+"England": 6.1,
+"Brazil": 5.5,
+"Portugal": 4.5,
+"Colombia": 4.0,
+"Germany": 3.5,
+"Netherlands": 2.8,
+"Japan": 2.6,
+"Ecuador": 2.5,
+"Belgium": 2.1,
+"Morocco": 1.8,
+"Mexico": 1.6,
+"Croatia": 1.5,
+"Norway": 1.4
+}
+},
+{
+"date": "2026-06-14",
+"odds": {
+"Spain": 22.6,
+"Argentina": 19.2,
+"France": 11.2,
+"England": 6.4,
+"Brazil": 5.5,
+"Colombia": 4.5,
+"Portugal": 4.1,
+"Germany": 3.6,
+"Netherlands": 3.0,
+"Japan": 2.5,
+"Ecuador": 2.5,
+"Morocco": 2.2,
+"Belgium": 2.1,
+"Mexico": 1.6,
+"Norway": 1.5,
+"Croatia": 1.4
+}
+},
+{
+"date": "2026-06-15",
+"odds": {
+"Spain": 22.3,
+"Argentina": 18.9,
+"France": 10.8,
+"England": 6.4,
+"Brazil": 5.4,
+"Colombia": 4.8,
+"Portugal": 4.6,
+"Germany": 4.2,
+"Netherlands": 3.1,
+"Japan": 2.8,
+"Morocco": 2.3,
+"Belgium": 2.1,
+"Mexico": 1.7,
+"Norway": 1.5,
+"Croatia": 1.4,
+"Ecuador": 1.0
+}
+},
+{
+"date": "2026-06-16",
+"odds": {
+"Spain": 22.3,
+"Argentina": 18.9,
+"France": 10.8,
+"England": 6.4,
+"Brazil": 5.4,
+"Colombia": 4.8,
+"Portugal": 4.6,
+"Germany": 4.2,
+"Netherlands": 3.1,
+"Japan": 2.8,
+"Morocco": 2.3,
+"Belgium": 2.1,
+"Mexico": 1.7,
+"Norway": 1.5,
+"Croatia": 1.4,
+"Ecuador": 1.0
+}
+},
+{
+"date": "2026-06-17",
+"odds": {
+"Argentina": 23.7,
+"Spain": 16.7,
+"France": 14.3,
+"England": 6.0,
+"Brazil": 5.4,
+"Colombia": 4.7,
+"Portugal": 4.5,
+"Germany": 4.2,
+"Netherlands": 2.8,
+"Japan": 2.5,
+"Morocco": 2.3,
+"Norway": 2.0,
+"Mexico": 1.7,
+"Belgium": 1.4,
+"Croatia": 1.3,
+"Australia": 1.0
+}
+},
+{
+"date": "2026-06-18",
+"odds": {
+"Argentina": 23.6,
+"Spain": 15.3,
+"France": 14.3,
+"England": 9.8,
+"Colombia": 6.3,
+"Brazil": 5.0,
+"Germany": 4.0,
+"Netherlands": 2.9,
+"Portugal": 2.5,
+"Japan": 2.4,
+"Morocco": 1.9,
+"Norway": 1.9,
+"Mexico": 1.5,
+"Belgium": 1.2,
+"Ecuador": 1.0,
+"Switzerland": 0.8
+}
+},
+{
+"date": "2026-06-19",
+"odds": {
+"Argentina": 23.2,
+"Spain": 15.5,
+"France": 14.1,
+"England": 9.7,
+"Colombia": 6.2,
+"Brazil": 5.0,
+"Germany": 4.0,
+"Netherlands": 2.8,
+"Portugal": 2.6,
+"Japan": 2.4,
+"Mexico": 2.2,
+"Morocco": 2.1,
+"Norway": 2.1,
+"Belgium": 1.3,
+"Australia": 0.9,
+"Ecuador": 0.9
+}
+},
+{
+"date": "2026-06-20",
+"odds": {
+"Argentina": 23.4,
+"Spain": 15.1,
+"France": 13.6,
+"England": 10.0,
+"Colombia": 5.7,
+"Brazil": 5.7,
+"Germany": 3.9,
+"Mexico": 2.6,
+"Morocco": 2.6,
+"Netherlands": 2.6,
+"Portugal": 2.4,
+"Japan": 2.4,
+"Norway": 1.8,
+"Belgium": 1.5,
+"United States": 1.1,
+"Ecuador": 1.0
+}
+},
+{
+"date": "2026-06-21",
+"odds": {
+"Argentina": 23.4,
+"Spain": 14.4,
+"France": 14.0,
+"England": 9.5,
+"Brazil": 5.5,
+"Colombia": 5.4,
+"Netherlands": 4.6,
+"Germany": 4.5,
+"Japan": 2.9,
+"Morocco": 2.4,
+"Portugal": 2.2,
+"Mexico": 2.2,
+"Norway": 1.8,
+"Belgium": 1.2,
+"Switzerland": 1.0,
+"Austria": 0.9
+}
+},
+{
+"date": "2026-06-22",
+"odds": {
+"Argentina": 23.0,
+"Spain": 15.6,
+"France": 14.4,
+"England": 8.7,
+"Colombia": 5.3,
+"Brazil": 5.1,
+"Germany": 4.8,
+"Netherlands": 4.5,
+"Japan": 2.9,
+"Morocco": 2.8,
+"Portugal": 2.4,
+"Mexico": 2.1,
+"Norway": 1.8,
+"United States": 1.1,
+"Switzerland": 1.0,
+"Belgium": 0.9
+}
+},
+{
+"date": "2026-06-23",
+"odds": {
+"Argentina": 23.0,
+"Spain": 15.6,
+"France": 14.4,
+"England": 8.7,
+"Colombia": 5.3,
+"Brazil": 5.1,
+"Germany": 4.8,
+"Netherlands": 4.5,
+"Japan": 2.9,
+"Morocco": 2.8,
+"Portugal": 2.4,
+"Mexico": 2.1,
+"Norway": 1.8,
+"United States": 1.1,
+"Switzerland": 1.0,
+"Belgium": 0.9
+}
+},
+{
+"date": "2026-06-24",
+"odds": {
+"Argentina": 25.3,
+"Spain": 15.1,
+"France": 14.2,
+"England": 6.4,
+"Colombia": 6.3,
+"Brazil": 5.5,
+"Germany": 4.3,
+"Netherlands": 3.8,
+"Portugal": 3.5,
+"Japan": 2.9,
+"Morocco": 2.5,
+"Norway": 2.4,
+"Mexico": 1.8,
+"United States": 1.0,
+"Belgium": 1.0,
+"Croatia": 0.8
+}
+},
+{
+"date": "2026-06-25",
+"odds": {
+"Argentina": 24.8,
+"Spain": 15.3,
+"France": 13.5,
+"Brazil": 7.3,
+"England": 6.4,
+"Colombia": 5.6,
+"Germany": 4.0,
+"Netherlands": 3.8,
+"Portugal": 3.4,
+"Morocco": 2.9,
+"Mexico": 2.5,
+"Japan": 2.2,
+"Norway": 2.1,
+"Switzerland": 1.6,
+"United States": 1.0,
+"Belgium": 1.0
+}
+},
+{
+"date": "2026-06-26",
+"odds": {
+"Argentina": 24.6,
+"Spain": 15.8,
+"France": 13.6,
+"Brazil": 7.8,
+"England": 6.1,
+"Colombia": 6.0,
+"Netherlands": 4.5,
+"Portugal": 3.1,
+"Germany": 2.7,
+"Morocco": 2.5,
+"Mexico": 2.5,
+"Norway": 2.4,
+"Switzerland": 1.9,
+"Japan": 1.8,
+"Ecuador": 1.0,
+"Croatia": 0.8
+}
+},
+{
+"date": "2026-06-27",
+"odds": {
+"Argentina": 24.6,
+"Spain": 15.8,
+"France": 13.6,
+"Brazil": 7.8,
+"England": 6.1,
+"Colombia": 6.0,
+"Netherlands": 4.5,
+"Portugal": 3.1,
+"Germany": 2.7,
+"Morocco": 2.5,
+"Mexico": 2.5,
+"Norway": 2.4,
+"Switzerland": 1.9,
+"Japan": 1.8,
+"Ecuador": 1.0,
+"Croatia": 0.8
+}
+},
+{
+"date": "2026-06-28",
+"odds": {
+"Argentina": 25.1,
+"France": 19.4,
+"Spain": 15.7,
+"England": 6.4,
+"Brazil": 6.0,
+"Colombia": 5.0,
+"Netherlands": 3.1,
+"Portugal": 3.0,
+"Germany": 2.4,
+"Morocco": 2.3,
+"Belgium": 1.7,
+"Japan": 1.7,
+"Switzerland": 1.4,
+"Mexico": 1.3,
+"Norway": 1.3,
+"Ecuador": 0.9
+}
+},
+{
+"date": "2026-06-29",
+"odds": {
+"Argentina": 25.1,
+"France": 19.4,
+"Spain": 15.7,
+"England": 6.4,
+"Brazil": 6.0,
+"Colombia": 5.0,
+"Netherlands": 3.1,
+"Portugal": 3.0,
+"Germany": 2.4,
+"Morocco": 2.3,
+"Belgium": 1.7,
+"Japan": 1.7,
+"Switzerland": 1.4,
+"Mexico": 1.3,
+"Norway": 1.3,
+"Ecuador": 0.9
+}
+}
+]

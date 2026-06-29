@@ -67,6 +67,11 @@
   <h2>Championship odds <span class="pill" id="oddsMeta">Monte Carlo</span></h2>
   <canvas id="oddsChart" aria-label="Championship odds bar chart"></canvas>
 
+  <h2>Title odds over time</h2>
+  <p class="tagline">How each contender's championship probability has moved as the tournament
+    unfolds, from the daily locked simulations.</p>
+  <canvas id="trajChart" aria-label="Title odds over time line chart"></canvas>
+
   <h2>Live record</h2>
   <p id="recordLine">…</p>
   <table id="resolvedTable"><thead><tr>
@@ -147,6 +152,47 @@ function render(d) {
       }
     });
   }
+}
+
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtDay = s => { const p = String(s).split("-"); return MON[+p[1]-1] + " " + (+p[2]); };
+const PALETTE = ["#4f9cff","#2ecc71","#e74c3c","#f1c40f","#9b59b6","#1abc9c","#e67e22","#ec87c0"];
+
+fetch("data/odds_history.json", { cache: "no-store" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(renderTrajectory)
+  .catch(() => { /* no history yet — leave the section empty */ });
+
+function renderTrajectory(series) {
+  if (!Array.isArray(series) || series.length === 0) return;
+  const labels = series.map(s => fmtDay(s.date));
+  const latest = series[series.length - 1].odds || {};
+  const teams = Object.keys(latest).sort((a, b) => latest[b] - latest[a]).slice(0, 6);
+  const datasets = teams.map((team, i) => ({
+    label: team,
+    data: series.map(s => (s.odds && s.odds[team] != null) ? s.odds[team] : null),
+    borderColor: PALETTE[i % PALETTE.length],
+    backgroundColor: PALETTE[i % PALETTE.length],
+    tension: 0.25, spanGaps: true, pointRadius: 2, borderWidth: 2
+  }));
+  new Chart(document.getElementById("trajChart"), {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: "#e6edf3" } },
+        tooltip: { callbacks: {
+          label: c => ` ${c.dataset.label}: ${c.parsed.y == null ? "—" : c.parsed.y.toFixed(1) + "%"}` } }
+      },
+      scales: {
+        x: { ticks: { color: "#8b98a5" }, grid: { color: "#263241" } },
+        y: { ticks: { color: "#8b98a5", callback: v => v + "%" }, grid: { color: "#263241" },
+          title: { display: true, text: "Title probability", color: "#8b98a5" } }
+      }
+    }
+  });
 }
 </script>
 </body>

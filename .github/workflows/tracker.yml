@@ -28,10 +28,26 @@ jobs:
       - name: Lock new predictions and score completed ones
         run: mvn -B -q compile exec:java -Dexec.args="--track"
 
+      - name: Append today's title odds to the trajectory history
+        run: |
+          python3 - <<'PY'
+          import json, os
+          tj = json.load(open('docs/data/tracker.json'))
+          date = tj.get('updated')
+          odds = {o['team']: round(o['title'], 1) for o in tj.get('titleOdds', [])}
+          path = 'docs/data/odds_history.json'
+          hist = json.load(open(path)) if os.path.exists(path) else []
+          hist = [h for h in hist if h.get('date') != date]   # replace same-day re-runs
+          hist.append({'date': date, 'odds': odds})
+          hist.sort(key=lambda h: h['date'])
+          open(path, 'w').write(json.dumps(hist, indent=0))
+          print('trajectory history now spans', len(hist), 'day(s)')
+          PY
+
       - name: Commit updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/results.csv predictions/predictions.csv README.md docs/data/tracker.json
+          git add data/results.csv predictions/predictions.csv README.md docs/data/tracker.json docs/data/odds_history.json
           git diff --cached --quiet || git commit -m "Tracker: lock predictions / update results $(date -u +%F)"
           git push
