@@ -124,13 +124,8 @@ public final class Tracker {
                                         List<Prediction> pending,
                                         LocalDate today) {
         StringBuilder md = new StringBuilder();
-        md.append("_Updated ").append(today)
-          .append(" — predictions are locked before kickoff and never edited; ")
-          .append("the git history of `predictions/predictions.csv` is the proof. ")
-          .append("Each pick is the model's most likely outcome and the H/D/A column its ")
-          .append("full home-win / draw / away-win split; the predicted score is the most ")
-          .append("likely scoreline (expected goals in brackets), and Δ is the total goal ")
-          .append("difference from the actual result (🎯 = exact). Brier is multiclass._\n\n");
+        md.append("Δ is the total goal difference from the actual result ")
+          .append("(🎯 = exact), and Brier is multiclass.\n\n");
 
         if (scored.isEmpty()) {
             md.append("**No locked predictions have been resolved yet.**\n");
@@ -142,14 +137,12 @@ public final class Tracker {
                             .goalError(s.result().homeScore(), s.result().awayScore()))
                     .average().orElse(0);
             md.append(String.format(Locale.ROOT,
-                    "**Record: %d/%d picks correct (%.1f%%) — multiclass Brier %.3f — "
+                    "**Record: %d/%d picks correct (%.1f%%), multiclass Brier %.3f, "
                             + "mean goal error %.1f** (uniform guess = 0.667)%n%n",
                     correct, scored.size(), 100.0 * correct / scored.size(), brier, meanGoalError));
 
             md.append(RESOLVED_HEADER);
-            List<ScoredPrediction> recent =
-                    scored.subList(Math.max(0, scored.size() - 15), scored.size());
-            for (ScoredPrediction s : recent) {
+            for (ScoredPrediction s : scored) {
                 appendResolvedRow(md, s);
             }
         }
@@ -160,7 +153,6 @@ public final class Tracker {
             md.append("|---|---|---|---|---|\n");
             pending.stream()
                     .sorted(Comparator.comparing(Prediction::matchDate))
-                    .limit(10)
                     .forEach(p -> md.append(String.format(Locale.ROOT,
                             "| %s | %s vs %s | %s | %s | %s |%n",
                             DAY.format(p.matchDate()), p.homeTeam(), p.awayTeam(),
@@ -192,13 +184,13 @@ public final class Tracker {
     public static String renderEarlyMatches(List<ScoredPrediction> early, LocalDate today) {
         StringBuilder md = new StringBuilder();
         if (early.isEmpty()) {
-            md.append("_No World Cup matches were played before the model was created._\n");
+            md.append("No World Cup matches were played before the model was created.\n");
             return md.toString();
         }
-        md.append("_These were played **before the model existed**, so they were never locked. ")
-          .append("Each row is a *retrospective* prediction, computed by training only on data ")
-          .append("from before that match — never peeking at the result — and is **not counted** ")
-          .append("in the record above. Shown for a complete tournament picture._\n\n");
+        md.append("These matches were played before the model existed, so they were never ")
+          .append("locked. Each is a retrospective prediction, trained only on data from ")
+          .append("before the match (never peeking at the result), and is not counted in the ")
+          .append("record above. Shown for a complete tournament picture.\n\n");
         md.append(RESOLVED_HEADER);
         for (ScoredPrediction s : early) {
             appendResolvedRow(md, s);
@@ -239,10 +231,10 @@ public final class Tracker {
                                          int topN, LocalDate today, int runs) {
         StringBuilder md = new StringBuilder();
         md.append(String.format(Locale.ROOT,
-                "_The model's championship odds from %,d Monte Carlo simulations, updated %s. "
+                "The model's championship odds from %,d Monte Carlo simulations, updated %s. "
                         + "They inherit the simulator's simplifications (Elo tie-breaks, seeded "
                         + "knockout pairings, knockout games as neutral with no draws), so read "
-                        + "them as the model's view, not a hard forecast._%n%n", runs, today));
+                        + "them as the model's view, not a hard forecast.%n%n", runs, today));
         md.append("| # | Team | Title | Final | Semis |\n");
         md.append("|---|---|---|---|---|\n");
         int n = Math.min(topN, odds.size());
