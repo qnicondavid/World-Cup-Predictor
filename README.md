@@ -15,12 +15,9 @@ bookmaker's closing line**, honestly verified.
 
 A GitHub Action runs daily: it pulls fresh results, locks predictions for
 upcoming fixtures with the production model, scores completed ones, and rewrites
-the tables below automatically. **Predictions are locked before kickoff and
-never edited.** The git history of `predictions/predictions.csv` is the proof.
-Most recent matches are listed first.
+the tables below automatically.
 
 <!-- TRACKER:START -->
-Δ is the total goal difference from the actual result (🎯 = exact), and Brier is multiclass.
 
 **Record: 46/73 picks correct (63.0%), multiclass Brier 0.532, mean goal error 2.0** (uniform guess = 0.667)
 
@@ -124,9 +121,6 @@ Most recent matches are listed first.
 
 ### Championship odds
 
-The model's title picks from 10,000 Monte Carlo simulations of the rest of the
-tournament, refreshed daily by the same Action.
-
 <!-- TITLE:START -->
 The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-29. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
 
@@ -156,7 +150,6 @@ The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-
 Before predicting 2026, the model is validated on five World Cups it never saw
 during training. For each tournament it trains only on matches played before it,
 then predicts every match in it, the same information regime as predicting live.
-These are overall per-tournament results, not individual matches.
 
 | Tournament | Tuned model | Baseline |
 |---|---|---|
