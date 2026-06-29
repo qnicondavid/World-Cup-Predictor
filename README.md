@@ -9,7 +9,7 @@ before kickoff, and scored against real results as the tournament unfolds. The
 longer-term aim is the hard one: probabilities good enough to **beat the
 bookmaker's closing line**, honestly verified.
 
-**Live demo: [qnicondavid.github.io/World-Cup-Predictor](https://qnicondavid.github.io/World-Cup-Predictor/)**
+**Live demo: [qnicondavid.github.io/World-Cup-Predictor](https://qnicondavid.github.io/world-cup-predictor/)**
 
 ## Live results
 
