@@ -21,7 +21,7 @@ the tables below automatically.
 
 **Record: 46/73 picks correct (63.0%), multiclass Brier 0.532, mean goal error 2.0** (uniform guess = 0.667)
 
-| Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |
+| Date | Match | Winner | H/D/A % | Score (xG) | Result | Δ | Hit |
 |---|---|---|---|---|---|---|---|
 | Jun 28 | South Africa vs Canada | Canada | 19/30/50% | 0-1 (0.7–1.3) | 0-1 | 0 🎯 | ✅ |
 | Jun 27 | Panama vs England | England | 8/19/73% | 0-2 (0.7–2.5) | 0-2 | 0 🎯 | ✅ |
@@ -99,7 +99,7 @@ the tables below automatically.
 
 **Locked for upcoming matches:**
 
-| Date | Match | Pick | H/D/A | Pred (xG) |
+| Date | Match | Winner | H/D/A % | Score (xG) |
 |---|---|---|---|---|
 | Jun 29 | Brazil vs Japan | Brazil | 45/29/26% | 1-0 (1.4–1.0) |
 | Jun 29 | Germany vs Paraguay | Germany | 53/27/21% | 1-0 (1.6–0.9) |

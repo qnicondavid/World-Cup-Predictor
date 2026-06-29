@@ -39,7 +39,7 @@ public final class Tracker {
     public static final String EARLY_SECTION_END = "<!-- EARLY:END -->";
 
     private static final String RESOLVED_HEADER =
-            "| Date | Match | Pick | H/D/A | Pred (xG) | Result | Δ | Hit |\n"
+            "| Date | Match | Winner | H/D/A % | Score (xG) | Result | Δ | Hit |\n"
                     + "|---|---|---|---|---|---|---|---|\n";
 
     private static final DateTimeFormatter DAY =
@@ -150,7 +150,7 @@ public final class Tracker {
 
         if (!pending.isEmpty()) {
             md.append("\n**Locked for upcoming matches:**\n\n");
-            md.append("| Date | Match | Pick | H/D/A | Pred (xG) |\n");
+            md.append("| Date | Match | Winner | H/D/A % | Score (xG) |\n");
             md.append("|---|---|---|---|---|\n");
             pending.stream()
                     .sorted(Comparator.comparing(Prediction::matchDate))
