@@ -1,6 +1,6 @@
 # World Cup Predictor
 
-![CI](https://github.com/qnicondavid/World-Cup-Predictor/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/qnicondavid/world-cup-predictor/actions/workflows/ci.yml/badge.svg)
 
 A prediction model for FIFA World Cup matches, trained on 150+ years of
 international football results (49,000+ matches, 1872–present). Predictions are
