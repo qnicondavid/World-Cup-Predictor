@@ -304,13 +304,18 @@ lookups always take the most recent value on or before the match date, so
 nothing leaks from the future.
 
 `--values-tune` grid-searches the weights on 2006-2018 and validates once on
-held-out 2022. The tuned prior (`globalWeight 0.20, sparseWeight 0, valueScale
-0.30`) beats plain Dixon-Coles out of sample (multiclass Brier **0.6065 vs
-0.6123** on 2022), so it is now the default. Caveats kept in view: the gain is
-small (~0.006 Brier, identical pick accuracy), it rests on a single held-out
-tournament, and the sparse-team lever earned nothing. The shipped
-`market_values.csv` is a small **illustrative** sample; replace it with real
-data (see Data below).
+held-out 2022. Held-out testing through the verification harness showed the
+value prior was under-exploited, so a widened sweep was run; the tuned prior
+(`globalWeight 0.40, sparseWeight 0, valueScale 0.60`, roughly double the
+earlier setting) beats plain Dixon-Coles out of sample (multiclass Brier
+**0.5907 vs 0.6123** on 2022) and is now the default. Scored across all five
+held-out World Cups through the export bridge, it cuts the production model's
+combined Brier from 0.5717 to 0.5566, with the gain split between better
+calibration (reliability 0.0226 to 0.0136) and sharper separation (resolution
+0.0914 to 0.0957). Caveats kept in view: four of five tournaments improve while
+2010 is marginally worse, and the sparse-team lever still earns nothing. The
+shipped `market_values.csv` is a small **illustrative** sample; replace it with
+real data (see Data below).
 
 ### Calibration
 
