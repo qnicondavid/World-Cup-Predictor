@@ -1,6 +1,7 @@
 package com.david.worldcup.tracker;
 
 import com.david.worldcup.elo.DrawModel;
+import com.david.worldcup.goals.FormAdjuster;
 import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.ScorePredictor;
 import com.david.worldcup.model.Fixture;
@@ -56,6 +57,18 @@ public final class Tracker {
                                                       List<Fixture> fixtures,
                                                       List<Prediction> ledger,
                                                       LocalDate today) {
+        return lockNewPredictions(model, fixtures, ledger, today, null);
+    }
+
+    /**
+     * As above, but nudges each locked prediction by recent defensive form when a
+     * {@link FormAdjuster} is supplied (null leaves the model output unchanged).
+     */
+    public static List<Prediction> lockNewPredictions(GoalModel model,
+                                                      List<Fixture> fixtures,
+                                                      List<Prediction> ledger,
+                                                      LocalDate today,
+                                                      FormAdjuster form) {
         Set<String> alreadyLocked = new HashSet<>();
         for (Prediction p : ledger) {
             alreadyLocked.add(key(p.matchDate(), p.homeTeam(), p.awayTeam()));
@@ -68,6 +81,9 @@ public final class Tracker {
                 .map(fx -> {
                     DrawModel.Probabilities p = model.probabilities(
                             fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
+                    if (form != null) {
+                        p = form.adjust(fx.homeTeam(), fx.awayTeam(), fx.date(), p);
+                    }
                     Optional<GoalModel.GoalRates> g = model.expectedGoals(
                             fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
                     double xgHome = g.map(GoalModel.GoalRates::home).orElse(Double.NaN);

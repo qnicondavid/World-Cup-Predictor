@@ -485,8 +485,9 @@ public final class Main {
         List<Fixture> fixtures = new MatchCsvParser().parseFixtures(csv);
         List<PredictionLedger.Prediction> ledger =
                 new ArrayList<>(PredictionLedger.load(ledgerPath));
+        FormAdjuster form = new FormAdjuster(matches);
         List<PredictionLedger.Prediction> added =
-                Tracker.lockNewPredictions(predictionModel, fixtures, ledger, today);
+                Tracker.lockNewPredictions(predictionModel, fixtures, ledger, today, form);
         ledger.addAll(added);
         ledger.sort(Comparator.comparing(PredictionLedger.Prediction::matchDate));
         PredictionLedger.save(ledgerPath, ledger);
@@ -510,8 +511,8 @@ public final class Main {
             DixonColesModel retro = marketValues.isEmpty()
                     ? DixonColesModel.fit(before, mt.date())
                     : DixonColesModel.fitWithValues(before, mt.date(), marketValues, ValueWeights.DEFAULT);
-            DrawModel.Probabilities pr =
-                    retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
+            DrawModel.Probabilities pr = form.adjust(mt.homeTeam(), mt.awayTeam(), mt.date(),
+                    retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue()));
             var goals = retro.expectedGoals(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
             earlyPredictions.add(new PredictionLedger.Prediction(
                     mt.date(), mt.homeTeam(), mt.awayTeam(), mt.neutralVenue(),
