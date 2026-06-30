@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>World Cup Elo Predictor — live 2026</title>
+<title>World Cup Predictor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -15,15 +15,34 @@
     font: 15px/1.55 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   .wrap { max-width: 920px; margin: 0 auto; padding: 32px 18px 64px; }
   h1 { font-size: 1.8rem; margin: 0 0 4px; }
-  h2 { font-size: 1.15rem; margin: 36px 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h2 { font-size: 1.15rem; margin: 0 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  .tagline { color: var(--muted); margin: 0 0 6px; }
   .updated { color: var(--muted); font-size: 0.85rem; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-  .card .big { font-size: 1.5rem; font-weight: 700; }
-  .card .lbl { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .tagline { color: var(--muted); margin: 0 0 12px; }
+
+  .shell { display: flex; gap: 30px; margin-top: 26px; }
+  .side { display: flex; flex-direction: column; gap: 13px; min-width: 172px; }
+  .side a { cursor: pointer; font-size: 0.9rem; color: var(--muted);
+    padding-left: 14px; border-left: 2px solid transparent; margin-left: -1px; }
+  .side a:hover { color: var(--fg); text-decoration: none; }
+  .side a.on { color: var(--fg); border-left-color: var(--accent); }
+  .main { flex: 1; min-width: 0; }
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 24px 0 4px; }
+  .stat .num { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+  .stat .lbl { color: var(--muted); font-size: 0.72rem; line-height: 1.45; margin-top: 10px; white-space: nowrap; }
+  .stat + .stat { border-left: 1px solid var(--line); padding-left: 24px; }
+
+  .bars { margin-top: 4px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .bar-team { width: 120px; font-size: 0.85rem; color: #cfd8e3; text-align: right; }
+  .bar-track { flex: 1; background: var(--card); border-radius: 3px; }
+  .bar-fill { background: var(--accent); height: 16px; border-radius: 3px; }
+  .bar-val { width: 46px; font-size: 0.8rem; color: var(--muted); }
+
   p { color: #cfd8e3; }
   table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
@@ -32,63 +51,102 @@
   .hit { color: var(--good); } .miss { color: var(--bad); }
   .pill { display: inline-block; background: #1f2a36; border: 1px solid var(--line);
     border-radius: 999px; padding: 1px 9px; font-size: 0.82rem; }
-  .note { background: #1a2230; border: 1px solid var(--line); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 12px 16px; color: #cfd8e3; }
   footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
   canvas { max-height: 380px; }
   .err { color: var(--bad); }
+
+  @media (max-width: 560px) {
+    .shell { flex-direction: column; gap: 18px; }
+    .side { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+    .side a { border-left: none; padding-left: 0; margin-left: 0; }
+    .side a.on { border-bottom: 2px solid var(--accent); }
+    .stat .lbl { white-space: normal; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>World Cup Elo Predictor</h1>
-  <p class="updated">Data updated <span id="updated">…</span> ·
-    <a id="repo" href="https://github.com/qnicondavid/World-Cup-Predictor">source on GitHub</a></p>
+  <p class="updated">Data updated <span id="updated">…</span> · Built with Java 17. Updated daily by a GitHub Action that re-fits the model, locks new
+    predictions, and re-runs 10,000 tournament simulations. Methodology and full backtests in the
+    <a id="repo" href="https://github.com/qnicondavid/World-Cup-Predictor">repository</a>.</p>
 
-  <h2>How it works</h2>
-  <p>Every prediction below comes from a <strong>Dixon-Coles</strong> goal model — per-team
-    attack/defence ratings fit by maximum likelihood on 49,000+ internationals (1872–present),
-    with squad market value folded in as a prior. It outputs win/draw/loss probabilities and a
-    most-likely scoreline. Predictions are <strong>locked before kickoff and never edited</strong>;
-    the git history of the prediction ledger is the proof.</p>
-  <div class="cards">
-    <div class="card"><div class="big">57%</div><div class="lbl">pick accuracy on 5 held-out World Cups (2006–2022)</div></div>
-    <div class="card"><div class="big">0.574</div><div class="lbl">multiclass Brier (uniform = 0.667)</div></div>
-    <div class="card"><div class="big">0.06</div><div class="lbl">expected calibration error — well-calibrated</div></div>
+  <div class="shell">
+    <nav class="side" id="side" aria-label="Sections">
+      <a data-tab="model">Model</a>
+      <a data-tab="champ">Championship odds</a>
+      <a data-tab="traj">Title odds over time</a>
+      <a data-tab="record" class="on">Live record</a>
+      <a data-tab="upcoming">Upcoming</a>
+      <a data-tab="past">Past World Cups</a>
+    </nav>
+
+    <div class="main">
+      <section class="panel" data-panel="model">
+        <h2>How it works</h2>
+        <p>Every prediction comes from a <strong>Dixon-Coles</strong> goal model: separate attack and
+          defence coefficients per team, fit by maximum likelihood on 49,000+ internationals since 1872,
+          with a low-score correlation correction and squad market value as a prior. From the fitted rates
+          it builds a full scoreline distribution, then reads off win/draw/loss probabilities and the
+          modal score.</p>
+        <div class="stats">
+          <div class="stat"><div class="num">57%</div><div class="lbl">pick accuracy on 5 held-out World Cups (2006–2022)</div></div>
+          <div class="stat"><div class="num">0.574</div><div class="lbl">multiclass Brier (uniform = 0.667)</div></div>
+          <div class="stat"><div class="num">0.06</div><div class="lbl">expected calibration error</div></div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="champ">
+        <h2>Championship odds <span class="pill">Monte Carlo</span></h2>
+        <div class="bars" id="champBars"></div>
+      </section>
+
+      <section class="panel" data-panel="traj">
+        <h2>Title odds over time</h2>
+        <p class="tagline">How each contender's championship probability has moved as the tournament
+          unfolds, from the daily locked simulations.</p>
+        <canvas id="trajChart" aria-label="Title odds over time line chart"></canvas>
+      </section>
+
+      <section class="panel on" data-panel="record">
+        <h2>Live record</h2>
+        <p id="recordLine">…</p>
+        <table id="resolvedTable"><thead><tr>
+          <th>Date</th><th>Match</th><th>Pick</th><th class="num">H/D/A</th>
+          <th>Pred</th><th>Result</th><th class="num">Hit</th>
+        </tr></thead><tbody></tbody></table>
+      </section>
+
+      <section class="panel" data-panel="upcoming">
+        <h2>Upcoming predictions</h2>
+        <table id="upcomingTable"><thead><tr>
+          <th>Date</th><th>Match</th><th>Pick</th><th class="num">Win</th>
+          <th class="num">Draw</th><th class="num">Loss</th><th>Pred</th>
+        </tr></thead><tbody></tbody></table>
+      </section>
+
+      <section class="panel" data-panel="past">
+        <h2>Past World Cups results</h2>
+        <p class="tagline">Validated on five World Cups it never saw during training. For each
+          tournament the model trains only on matches played before it, then predicts every match in
+          it, the same information regime as predicting live.</p>
+        <table>
+          <thead><tr><th>Tournament</th><th>Tuned model</th><th>Baseline</th></tr></thead>
+          <tbody>
+            <tr><td>World Cup 2022</td><td>32/64 (50.0%), Brier 0.183</td><td>34/64 (53.1%), Brier 0.181</td></tr>
+            <tr><td>World Cup 2018</td><td>37/64 (57.8%), Brier 0.159</td><td>34/64 (53.1%), Brier 0.167</td></tr>
+            <tr><td>World Cup 2014</td><td>39/64 (60.9%), Brier 0.135</td><td>39/64 (60.9%), Brier 0.150</td></tr>
+            <tr><td>World Cup 2010</td><td>35/64 (54.7%), Brier 0.146</td><td>32/64 (50.0%), Brier 0.148</td></tr>
+            <tr><td>World Cup 2006</td><td>41/64 (64.1%), Brier 0.119</td><td>42/64 (65.6%), Brier 0.129</td></tr>
+            <tr><td><strong>Combined (320)</strong></td><td><strong>184/320 (57.5%), Brier 0.148</strong></td><td>181/320 (56.6%), Brier 0.155</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
   </div>
-  <div class="note">
-    <strong>An honest finding:</strong> rigorously evaluated, this is a well-calibrated forecaster
-    but <strong>not</strong> a market-beating one — its disagreements with bookmaker odds track its
-    own small calibration drift, not genuine edge. The project documents what was tried and what
-    <em>didn't</em> work (rest-days, naïve market value, temperature recalibration) as much as what did.
-  </div>
-
-  <h2>Championship odds <span class="pill" id="oddsMeta">Monte Carlo</span></h2>
-  <canvas id="oddsChart" aria-label="Championship odds bar chart"></canvas>
-
-  <h2>Title odds over time</h2>
-  <p class="tagline">How each contender's championship probability has moved as the tournament
-    unfolds, from the daily locked simulations.</p>
-  <canvas id="trajChart" aria-label="Title odds over time line chart"></canvas>
-
-  <h2>Live record</h2>
-  <p id="recordLine">…</p>
-  <table id="resolvedTable"><thead><tr>
-    <th>Date</th><th>Match</th><th>Pick</th><th class="num">H/D/A</th>
-    <th>Pred</th><th>Result</th><th class="num">Hit</th>
-  </tr></thead><tbody></tbody></table>
-
-  <h2>Upcoming predictions</h2>
-  <table id="upcomingTable"><thead><tr>
-    <th>Date</th><th>Match</th><th>Pick</th><th class="num">Win</th>
-    <th class="num">Draw</th><th class="num">Loss</th><th>Pred</th>
-  </tr></thead><tbody></tbody></table>
 
   <footer>
     <p id="status"></p>
-    <p>Built with Java 17. Updated daily by a GitHub Action that re-fits the model, locks new
-      predictions, and re-runs 10,000 tournament simulations. Methodology and full backtests in the
-      <a href="https://github.com/qnicondavid/World-Cup-Predictor">repository</a>.</p>
   </footer>
 </div>
 
@@ -131,36 +189,34 @@ function render(d) {
        <td class="num">${pct(m.pAway)}</td><td>${esc(m.predScore)}</td></tr>`);
   });
 
-  const odds = (d.titleOdds || []).slice().reverse();
-  if (odds.length) {
-    new Chart(document.getElementById("oddsChart"), {
-      type: "bar",
-      data: {
-        labels: odds.map(o => o.team),
-        datasets: [{ label: "Title %", data: odds.map(o => o.title),
-          backgroundColor: "#4f9cff" }]
-      },
-      options: {
-        indexAxis: "y", responsive: true,
-        plugins: { legend: { display: false },
-          tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(1)}% to win` } } },
-        scales: {
-          x: { ticks: { color: "#8b98a5", callback: v => v + "%" }, grid: { color: "#263241" } },
-          y: { ticks: { color: "#e6edf3" }, grid: { display: false } }
-        }
-      }
-    });
-  }
+  const odds = (d.titleOdds || []).slice().sort((a, b) => b.title - a.title);
+  const max = odds.length ? odds[0].title : 1;
+  document.getElementById("champBars").innerHTML = odds.map(o =>
+    `<div class="bar-row">
+       <div class="bar-team">${esc(o.team)}</div>
+       <div class="bar-track"><div class="bar-fill" style="width:${(o.title / max * 100).toFixed(0)}%"></div></div>
+       <div class="bar-val">${o.title.toFixed(1)}%</div>
+     </div>`).join("");
 }
 
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtDay = s => { const p = String(s).split("-"); return MON[+p[1]-1] + " " + (+p[2]); };
 const PALETTE = ["#4f9cff","#2ecc71","#e74c3c","#f1c40f","#9b59b6","#1abc9c","#e67e22","#ec87c0"];
 
+let trajSeries = null, trajDone = false;
+
 fetch("data/odds_history.json", { cache: "no-store" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(renderTrajectory)
+  .then(s => { trajSeries = s; ensureTraj(); })
   .catch(() => { /* no history yet — leave the section empty */ });
+
+function ensureTraj() {
+  if (trajDone || !trajSeries) return;
+  const panel = document.querySelector('[data-panel="traj"]');
+  if (!panel || !panel.classList.contains("on")) return;   // wait until the tab is visible so the canvas has width
+  trajDone = true;
+  renderTrajectory(trajSeries);
+}
 
 function renderTrajectory(series) {
   if (!Array.isArray(series) || series.length === 0) return;
@@ -193,6 +249,15 @@ function renderTrajectory(series) {
     }
   });
 }
+
+document.getElementById("side").addEventListener("click", e => {
+  const a = e.target.closest("[data-tab]");
+  if (!a) return;
+  const tab = a.getAttribute("data-tab");
+  document.querySelectorAll("#side [data-tab]").forEach(x => x.classList.toggle("on", x === a));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.getAttribute("data-panel") === tab));
+  if (tab === "traj") ensureTraj();
+});
 </script>
 </body>
 </html>
