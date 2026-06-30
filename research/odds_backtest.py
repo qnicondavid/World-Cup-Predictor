@@ -56,28 +56,62 @@ def mcb(p, y):
     return sum((p[i] - e[i]) ** 2 for i in range(3))
 
 
-def load_odds():
-    path = os.path.join(_DATA, "odds_history.csv")
-    if not os.path.exists(path):
-        raise SystemExit("Provide data/odds_history.csv first (see the module docstring).")
-    rows = {}
-    with open(path, encoding="utf-8") as f:
-        r = csv.DictReader(f)
-        cols = {c.lower(): c for c in r.fieldnames}
-        need = ["match_date", "home_team", "away_team", "home_odds", "draw_odds", "away_odds"]
-        for n in need:
-            if n not in cols:
-                raise SystemExit(f"odds_history.csv missing column '{n}'. Have: {r.fieldnames}")
-        for row in r:
-            d = row[cols["match_date"]][:10]
-            h = canon(row[cols["home_team"]])
-            a = canon(row[cols["away_team"]])
-            try:
-                oh, od, oa = (float(row[cols["home_odds"]]), float(row[cols["draw_odds"]]),
-                              float(row[cols["away_odds"]]))
-            except ValueError:
+def _avg_blob(cell):
+    """Average 1/X/2 across the per-bookmaker dicts in an OddsHarvester blob."""
+    import ast
+    try:
+        books = ast.literal_eval(cell)
+    except (ValueError, SyntaxError):
+        return None
+    H = [float(b["1"]) for b in books if "1" in b]
+    D = [float(b["X"]) for b in books if "X" in b]
+    A = [float(b["2"]) for b in books if "2" in b]
+    return (sum(H) / len(H), sum(D) / len(D), sum(A) / len(A)) if H and D and A else None
+
+
+def _from_scrapes(rows):
+    """Fallback source: the raw OddsHarvester scrape CSVs (1x2_market blobs)."""
+    for f in ("wc2018_odds.csv", "wc2022_odds.csv", "wc2018_full.csv", "wc2022_full.csv"):
+        p = os.path.join(_DATA, f)
+        if not os.path.exists(p):
+            continue
+        for row in csv.DictReader(open(p, encoding="utf-8")):
+            avg = _avg_blob(row.get("1x2_market", "") or "")
+            if not avg:
                 continue
-            rows[(d, h, a)] = (oh, od, oa)
+            d, h, a = row["match_date"][:10], canon(row["home_team"]), canon(row["away_team"])
+            rows.setdefault((d, frozenset((h, a))), (h,) + avg)
+
+
+def load_odds():
+    """Return {(date, frozenset{teams}): (home_team, o_home, o_draw, o_away)}.
+
+    Keyed on the UNORDERED team pair so a neutral-venue match joins regardless of
+    which side each source calls 'home'; the stored home_team lets the caller
+    orient the odds to the prediction. Robust to a NUL-corrupted or thin
+    odds_history.csv: rebuilds from the scrape CSVs if needed.
+    """
+    rows = {}
+    path = os.path.join(_DATA, "odds_history.csv")
+    if os.path.exists(path):
+        data = open(path, encoding="utf-8", errors="ignore").read().replace("\x00", "")
+        r = csv.DictReader(data.splitlines())
+        cols = {c.lower(): c for c in (r.fieldnames or [])}
+        need = ("match_date", "home_team", "away_team", "home_odds", "draw_odds", "away_odds")
+        if all(c in cols for c in need):
+            for row in r:
+                try:
+                    d = row[cols["match_date"]][:10]
+                    h, a = canon(row[cols["home_team"]]), canon(row[cols["away_team"]])
+                    oh, od, oa = (float(row[cols["home_odds"]]), float(row[cols["draw_odds"]]),
+                                  float(row[cols["away_odds"]]))
+                except (ValueError, KeyError, TypeError):
+                    continue
+                rows[(d, frozenset((h, a)))] = (h, oh, od, oa)
+    if len(rows) < 60:  # corrupt/thin odds_history.csv -> rebuild from scrape blobs
+        _from_scrapes(rows)
+    if not rows:
+        raise SystemExit("No odds found (odds_history.csv and scrape CSVs both empty).")
     return rows
 
 
@@ -89,14 +123,18 @@ def main():
         for r in csv.DictReader(f):
             if r["tournament"] not in ("WC2018", "WC2022"):
                 continue
-            key = (r["date"][:10], canon(r["home"]), canon(r["away"]))
-            o = odds.get(key)
-            if not o:
+            home, away = canon(r["home"]), canon(r["away"])
+            rec = odds.get((r["date"][:10], frozenset((home, away))))
+            if not rec:
                 continue
+            o_home, oh, od, oa = rec
+            if o_home != home:  # source called the other side 'home' - orient to prediction
+                oh, oa = oa, oh
+            o = [oh, od, oa]
             y = {"home": 0, "draw": 1, "away": 2}[r["actual"]]
             model = [float(r["p_home"]), float(r["p_draw"]), float(r["p_away"])]
             market = devig(*o)
-            joined.append((r["tournament"], model, market, list(o), y))
+            joined.append((r["tournament"], model, market, o, y))
 
     n = len(joined)
     print(f"joined {n} of 128 WC2018+WC2022 matches with odds")

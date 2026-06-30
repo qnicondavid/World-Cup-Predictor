@@ -49,7 +49,12 @@ def load_results():
 
 
 def load_closing():
-    """Latest avg price per (date,home,away) for each outcome = closing line."""
+    """Latest BEST price per (date,home,away) for each outcome = closing line.
+
+    CLV must be like-for-like: bets are entered at the best available price, so the
+    close is also the best price. Grading entry-best against the cross-book AVERAGE
+    would manufacture positive CLV out of book dispersion alone.
+    """
     close = {}
     p = os.path.join(_DATA, "odds_live.csv")
     if not os.path.exists(p):
@@ -57,8 +62,8 @@ def load_closing():
     for r in csv.DictReader(open(p, encoding="utf-8")):
         key = (r["match_date"], canon(r["home_team"]), canon(r["away_team"]))
         # rows are appended in capture order; last write wins = closest to kickoff
-        close[key] = {"home": float(r["avg_home"]), "draw": float(r["avg_draw"]),
-                      "away": float(r["avg_away"])}
+        close[key] = {"home": float(r["best_home"]), "draw": float(r["best_draw"]),
+                      "away": float(r["best_away"])}
     return close
 
 

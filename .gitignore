@@ -9,3 +9,5 @@ research/export_predictions.csv
 data/lineups.csv
 data/lineup_values.csv
 research/.odds_api_key
+data/wc*_links.txt
+data/wc*_books.csv
