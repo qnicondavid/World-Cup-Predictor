@@ -33,7 +33,7 @@
   .panel + .panel { margin-top: 44px; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 24px 0 4px; }
-  .statrow { display: flex; gap: 24px; margin: 8px 0 20px; flex-wrap: wrap; }
+  .statrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 8px 0 20px; }
   .stat .num { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
   .stat .lbl { color: var(--muted); font-size: 0.72rem; line-height: 1.45; margin-top: 10px; white-space: nowrap; }
   .stat + .stat { border-left: 1px solid var(--line); padding-left: 24px; }
@@ -66,14 +66,14 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>World Cup Elo Predictor</h1>
+  <h1 id="top">World Cup Elo Predictor</h1>
   <p class="updated">Data updated <span id="updated">…</span> · Built with Java 17. Updated daily by a GitHub Action that re-fits the model, locks new
     predictions, and re-runs 10,000 tournament simulations. Methodology and full backtests in the
     <a id="repo" href="https://github.com/qnicondavid/World-Cup-Predictor">repository</a>.</p>
 
   <div class="shell">
     <nav class="side" id="side" aria-label="Sections">
-      <a href="#model" class="on">Model</a>
+      <a href="#top" data-spy="model" class="on">Model</a>
       <a href="#champ">Championship odds</a>
       <a href="#traj">Title odds over time</a>
       <a href="#record">Live record</a>
@@ -89,6 +89,12 @@
           with a low-score correlation correction and squad market value as a prior. From the fitted rates
           it builds a full scoreline distribution, then reads off win/draw/loss probabilities and the
           modal score.</p>
+        <p>The model trains on 49,495 international matches stretching back to the first official fixture
+          in 1872, a dataset maintained by
+          <a href="https://github.com/martj42/international_results">martj42</a> and refreshed daily.
+          Squad strength comes from
+          <a href="https://github.com/dcaribou/transfermarkt-datasets">Transfermarkt's</a> market
+          valuations, covering 182 national teams from 2006 onward, which feed the value prior.</p>
         <div class="stats">
           <div class="stat"><div class="num">57%</div><div class="lbl">pick accuracy on 5 held-out World Cups (2006–2022)</div></div>
           <div class="stat"><div class="num">0.574</div><div class="lbl">multiclass Brier (uniform = 0.667)</div></div>
@@ -173,7 +179,7 @@ function render(d) {
     : `<p style="margin:0">No locked predictions have been resolved yet.</p>`;
 
   const rb = document.querySelector("#resolvedTable tbody");
-  (d.resolved || []).forEach(m => {
+  (d.resolved || []).slice().reverse().forEach(m => {
     rb.insertAdjacentHTML("beforeend",
       `<tr><td>${esc(m.date)}</td><td>${esc(m.home)} v ${esc(m.away)}</td><td>${esc(m.pick)}</td>
        <td class="num">${hda(m)}</td><td>${esc(m.predScore)}</td><td>${esc(m.result)}</td>
@@ -241,7 +247,10 @@ function renderTrajectory(series) {
 }
 
 const navLinks = {};
-document.querySelectorAll("#side a").forEach(a => { navLinks[a.getAttribute("href").slice(1)] = a; });
+document.querySelectorAll("#side a").forEach(a => {
+  const key = a.getAttribute("data-spy") || a.getAttribute("href").slice(1);
+  navLinks[key] = a;
+});
 const spy = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting) {
