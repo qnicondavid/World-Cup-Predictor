@@ -11,6 +11,7 @@ import com.david.worldcup.goals.BivariatePoissonModel;
 import com.david.worldcup.goals.Calibration;
 import com.david.worldcup.goals.DixonColesModel;
 import com.david.worldcup.goals.ValueAdjuster;
+import com.david.worldcup.goals.FormAdjuster;
 import com.david.worldcup.goals.EloDrawBaselineModel;
 import com.david.worldcup.goals.EloPoissonModel;
 import com.david.worldcup.goals.EnsembleModel;
@@ -662,13 +663,17 @@ public final class Main {
     }
 
     private static void runVerifyExport(List<Match> matches) throws IOException {
-        System.out.println("=== Verify export: writing held-out per-match predictions to research/export_predictions.csv ===");
+        System.out.println("=== Verify export: writing held-out per-match predictions ===");
         MarketValueTable values = MarketValueTable.load(Path.of("data/market_values.csv"));
         ValueTuner tuner = new ValueTuner(12, values);
+        FormAdjuster form = new FormAdjuster(matches);
 
         Path outPath = Path.of("research/export_predictions.csv");
-        try (PrintWriter pw = new PrintWriter(new FileWriter(outPath.toFile()))) {
+        Path formPath = Path.of("research/export_predictions_form.csv");
+        try (PrintWriter pw = new PrintWriter(new FileWriter(outPath.toFile()));
+             PrintWriter fw = new PrintWriter(new FileWriter(formPath.toFile()))) {
             pw.println("tournament,home,away,date,p_home,p_draw,p_away,actual");
+            fw.println("tournament,home,away,date,p_home,p_draw,p_away,actual");
             for (Backtest.Window w : Backtest.WORLD_CUPS) {
                 ValueTuner.Prepared p = tuner.prepare(matches, w);
                 var strength = values.isEmpty() ? p.base()
@@ -684,17 +689,26 @@ public final class Main {
                         case DRAW    -> "draw";
                         case AWAY_WIN -> "away";
                     };
-                    pw.printf(Locale.ROOT, "%s,%s,%s,%s,%.8f,%.8f,%.8f,%s%n",
-                            label,
-                            m.homeTeam().replace(",", ";"),
-                            m.awayTeam().replace(",", ";"),
-                            m.date(),
-                            pr.homeWin(), pr.draw(), pr.awayWin(),
-                            actual);
+                    writeExportRow(pw, label, m, pr, actual);
+                    DrawModel.Probabilities adjusted =
+                            form.adjust(m.homeTeam(), m.awayTeam(), m.date(), pr);
+                    writeExportRow(fw, label, m, adjusted, actual);
                 }
             }
         }
-        System.out.printf("Written %s%n", outPath.toAbsolutePath());
+        System.out.printf("Written %s (value prior) and %s (value prior + recent form)%n",
+                outPath.toAbsolutePath(), formPath.toAbsolutePath());
+    }
+
+    private static void writeExportRow(PrintWriter pw, String label, Match m,
+                                       DrawModel.Probabilities pr, String actual) {
+        pw.printf(Locale.ROOT, "%s,%s,%s,%s,%.8f,%.8f,%.8f,%s%n",
+                label,
+                m.homeTeam().replace(",", ";"),
+                m.awayTeam().replace(",", ";"),
+                m.date(),
+                pr.homeWin(), pr.draw(), pr.awayWin(),
+                actual);
     }
 
     private Main() {
