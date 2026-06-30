@@ -48,12 +48,17 @@ public final class ValueTuner {
         this.values = values;
     }
 
-    /** A reasonable default grid; (0,0,*) is the plain Dixon-Coles baseline. */
+    /**
+     * Grid over {@link ValueWeights}; (0,0,*) is the plain Dixon-Coles baseline.
+     * Widened toward stronger value weights (global up to 0.8, scale up to 0.6):
+     * held-out testing on the production export showed the value prior is
+     * under-exploited, and the previous optimum sat at the grid's scale edge.
+     */
     public static List<ValueWeights> defaultGrid() {
         List<ValueWeights> grid = new ArrayList<>();
-        for (double global : new double[] {0.0, 0.1, 0.2, 0.4}) {
+        for (double global : new double[] {0.0, 0.1, 0.2, 0.4, 0.6, 0.8}) {
             for (double sparse : new double[] {0.0, 0.3, 0.6, 1.0}) {
-                for (double scale : new double[] {0.1, 0.2, 0.3}) {
+                for (double scale : new double[] {0.1, 0.2, 0.3, 0.4, 0.5, 0.6}) {
                     grid.add(new ValueWeights(global, sparse, 5.0, scale));
                 }
             }
