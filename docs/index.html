@@ -11,6 +11,7 @@
     --muted: #8b98a5; --accent: #4f9cff; --good: #2ecc71; --bad: #e74c3c;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body { margin: 0; background: var(--bg); color: var(--fg);
     font: 15px/1.55 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   .wrap { max-width: 920px; margin: 0 auto; padding: 32px 18px 64px; }
@@ -21,17 +22,18 @@
   .updated { color: var(--muted); font-size: 0.85rem; }
   .tagline { color: var(--muted); margin: 0 0 12px; }
 
-  .shell { display: flex; gap: 30px; margin-top: 26px; }
-  .side { display: flex; flex-direction: column; gap: 13px; min-width: 172px; }
+  .shell { display: flex; gap: 30px; margin-top: 26px; align-items: flex-start; }
+  .side { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 13px; min-width: 172px; }
   .side a { cursor: pointer; font-size: 0.9rem; color: var(--muted);
     padding-left: 14px; border-left: 2px solid transparent; margin-left: -1px; }
   .side a:hover { color: var(--fg); text-decoration: none; }
   .side a.on { color: var(--fg); border-left-color: var(--accent); }
   .main { flex: 1; min-width: 0; }
-  .panel { display: none; }
-  .panel.on { display: block; }
+  .panel { scroll-margin-top: 24px; }
+  .panel + .panel { margin-top: 44px; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 24px 0 4px; }
+  .statrow { display: flex; gap: 24px; margin: 8px 0 20px; flex-wrap: wrap; }
   .stat .num { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
   .stat .lbl { color: var(--muted); font-size: 0.72rem; line-height: 1.45; margin-top: 10px; white-space: nowrap; }
   .stat + .stat { border-left: 1px solid var(--line); padding-left: 24px; }
@@ -49,15 +51,13 @@
   th { color: var(--muted); font-weight: 600; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .hit { color: var(--good); } .miss { color: var(--bad); }
-  .pill { display: inline-block; background: #1f2a36; border: 1px solid var(--line);
-    border-radius: 999px; padding: 1px 9px; font-size: 0.82rem; }
   footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
   canvas { max-height: 380px; }
   .err { color: var(--bad); }
 
   @media (max-width: 560px) {
     .shell { flex-direction: column; gap: 18px; }
-    .side { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+    .side { position: static; flex-direction: row; flex-wrap: wrap; gap: 16px; }
     .side a { border-left: none; padding-left: 0; margin-left: 0; }
     .side a.on { border-bottom: 2px solid var(--accent); }
     .stat .lbl { white-space: normal; }
@@ -73,16 +73,16 @@
 
   <div class="shell">
     <nav class="side" id="side" aria-label="Sections">
-      <a data-tab="model">Model</a>
-      <a data-tab="champ">Championship odds</a>
-      <a data-tab="traj">Title odds over time</a>
-      <a data-tab="record" class="on">Live record</a>
-      <a data-tab="upcoming">Upcoming</a>
-      <a data-tab="past">Past World Cups</a>
+      <a href="#model" class="on">Model</a>
+      <a href="#champ">Championship odds</a>
+      <a href="#traj">Title odds over time</a>
+      <a href="#record">Live record</a>
+      <a href="#upcoming">Upcoming</a>
+      <a href="#past">Past World Cups</a>
     </nav>
 
     <div class="main">
-      <section class="panel" data-panel="model">
+      <section class="panel" id="model">
         <h2>How it works</h2>
         <p>Every prediction comes from a <strong>Dixon-Coles</strong> goal model: separate attack and
           defence coefficients per team, fit by maximum likelihood on 49,000+ internationals since 1872,
@@ -96,28 +96,26 @@
         </div>
       </section>
 
-      <section class="panel" data-panel="champ">
-        <h2>Championship odds <span class="pill">Monte Carlo</span></h2>
+      <section class="panel" id="champ">
+        <h2>Championship odds</h2>
         <div class="bars" id="champBars"></div>
       </section>
 
-      <section class="panel" data-panel="traj">
+      <section class="panel" id="traj">
         <h2>Title odds over time</h2>
-        <p class="tagline">How each contender's championship probability has moved as the tournament
-          unfolds, from the daily locked simulations.</p>
         <canvas id="trajChart" aria-label="Title odds over time line chart"></canvas>
       </section>
 
-      <section class="panel on" data-panel="record">
+      <section class="panel" id="record">
         <h2>Live record</h2>
-        <p id="recordLine">…</p>
+        <div class="statrow" id="recordStats"></div>
         <table id="resolvedTable"><thead><tr>
           <th>Date</th><th>Match</th><th>Pick</th><th class="num">H/D/A</th>
           <th>Pred</th><th>Result</th><th class="num">Hit</th>
         </tr></thead><tbody></tbody></table>
       </section>
 
-      <section class="panel" data-panel="upcoming">
+      <section class="panel" id="upcoming">
         <h2>Upcoming predictions</h2>
         <table id="upcomingTable"><thead><tr>
           <th>Date</th><th>Match</th><th>Pick</th><th class="num">Win</th>
@@ -125,7 +123,7 @@
         </tr></thead><tbody></tbody></table>
       </section>
 
-      <section class="panel" data-panel="past">
+      <section class="panel" id="past">
         <h2>Past World Cups results</h2>
         <p class="tagline">Validated on five World Cups it never saw during training. For each
           tournament the model trains only on matches played before it, then predicts every match in
@@ -167,10 +165,12 @@ function render(d) {
   document.getElementById("updated").textContent = d.updated || "—";
 
   const rec = d.record || { correct: 0, evaluated: 0, brier: 0 };
-  document.getElementById("recordLine").innerHTML = rec.evaluated
-    ? `<strong>${rec.correct}/${rec.evaluated}</strong> picks correct
-       (${pct(rec.correct / rec.evaluated)}) · multiclass Brier <strong>${rec.brier.toFixed(3)}</strong>`
-    : "No locked predictions have been resolved yet.";
+  const acc = rec.evaluated ? Math.round(rec.correct / rec.evaluated * 100) : 0;
+  document.getElementById("recordStats").innerHTML = rec.evaluated
+    ? `<div class="stat"><div class="num">${rec.correct}/${rec.evaluated}</div><div class="lbl">picks correct</div></div>
+       <div class="stat"><div class="num">${acc}%</div><div class="lbl">pick accuracy</div></div>
+       <div class="stat"><div class="num">${rec.brier.toFixed(3)}</div><div class="lbl">multiclass Brier</div></div>`
+    : `<p style="margin:0">No locked predictions have been resolved yet.</p>`;
 
   const rb = document.querySelector("#resolvedTable tbody");
   (d.resolved || []).forEach(m => {
@@ -203,20 +203,10 @@ const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","
 const fmtDay = s => { const p = String(s).split("-"); return MON[+p[1]-1] + " " + (+p[2]); };
 const PALETTE = ["#4f9cff","#2ecc71","#e74c3c","#f1c40f","#9b59b6","#1abc9c","#e67e22","#ec87c0"];
 
-let trajSeries = null, trajDone = false;
-
 fetch("data/odds_history.json", { cache: "no-store" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(s => { trajSeries = s; ensureTraj(); })
+  .then(renderTrajectory)
   .catch(() => { /* no history yet — leave the section empty */ });
-
-function ensureTraj() {
-  if (trajDone || !trajSeries) return;
-  const panel = document.querySelector('[data-panel="traj"]');
-  if (!panel || !panel.classList.contains("on")) return;   // wait until the tab is visible so the canvas has width
-  trajDone = true;
-  renderTrajectory(trajSeries);
-}
 
 function renderTrajectory(series) {
   if (!Array.isArray(series) || series.length === 0) return;
@@ -250,14 +240,17 @@ function renderTrajectory(series) {
   });
 }
 
-document.getElementById("side").addEventListener("click", e => {
-  const a = e.target.closest("[data-tab]");
-  if (!a) return;
-  const tab = a.getAttribute("data-tab");
-  document.querySelectorAll("#side [data-tab]").forEach(x => x.classList.toggle("on", x === a));
-  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.getAttribute("data-panel") === tab));
-  if (tab === "traj") ensureTraj();
-});
+const navLinks = {};
+document.querySelectorAll("#side a").forEach(a => { navLinks[a.getAttribute("href").slice(1)] = a; });
+const spy = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      Object.values(navLinks).forEach(a => a.classList.remove("on"));
+      if (navLinks[e.target.id]) navLinks[e.target.id].classList.add("on");
+    }
+  });
+}, { rootMargin: "-15% 0px -75% 0px", threshold: 0 });
+document.querySelectorAll(".panel").forEach(p => spy.observe(p));
 </script>
 </body>
 </html>
