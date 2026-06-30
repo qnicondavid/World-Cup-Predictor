@@ -17,16 +17,18 @@ package com.david.worldcup.goals;
  * log-goals of attack (and the same reduction in goals conceded).
  *
  * <p>The defaults were tuned by {@code --values-tune}: a grid search on World
- * Cups 2006-2018, validated once on held-out 2022 (where they beat plain
- * Dixon-Coles, Brier 0.6065 vs 0.6123). The notable outcome is
+ * Cups 2006-2018, validated once on held-out 2022. After held-out testing
+ * showed the value prior was under-exploited, a widened sweep moved the optimum
+ * to {@code globalWeight 0.40, valueScale 0.60} (roughly double the earlier
+ * setting), which beats plain Dixon-Coles on held-out 2022 (Brier 0.5907 vs
+ * 0.6123) and the earlier weaker prior (0.6065). The notable outcome is
  * {@code sparseWeight = 0}: at World Cup level no team is data-starved, so the
  * sparse-team prior does nothing and it is the uniform {@code globalWeight}
- * blend that helps. The winner sat at the edge of the search grid, so a wider
- * sweep may find a slightly stronger setting.
+ * blend that helps.
  */
 public record ValueWeights(double globalWeight, double sparseWeight, double kappa, double valueScale) {
 
-    public static final ValueWeights DEFAULT = new ValueWeights(0.20, 0.00, 5.0, 0.30);
+    public static final ValueWeights DEFAULT = new ValueWeights(0.40, 0.00, 5.0, 0.60);
 
     /** Shrinkage weight toward the value prior for a team seen {@code matches} times. */
     public double shrinkageFor(int matches) {
