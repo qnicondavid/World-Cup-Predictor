@@ -251,6 +251,26 @@ the residual sits inside the noise. The export bridge and verification harness
 (research/verify.py) built to settle this are kept, since every future idea is
 judged the same way.
 
+Three later ideas were tested the same way and also did not clear the gate.
+**Favourite recalibration** (a leave-one-tournament-out map that sharpens the
+favourite's probability) cut reliability but traded away resolution and reversed
+sign on one tournament, leaving a 95% CI of [-0.013, +0.001] that grazes zero:
+the temperature lesson a third time, not adopted. **Dynamic / state-space
+ratings** (a two-timescale strength blend) gave at most a noise-floor Brier
+change with no certifiable resolution lift. **Lineup-weighted squad value** (the
+actual starting XI valued as-of the match date, sourced from StatsBomb open data
+for 2018 and 2022) carried only a weak residual signal (correlation 0.06) that
+did not transfer between tournaments and cost resolution out of sample, so the
+harder 2006-2014 backfill was not pursued; the collectors live in
+research/fetch_lineups.py and research/lineup_value.py as a record of the
+attempt.
+
+Across the campaign the two changes that survived this gate were the
+strengthened value prior and the recent-form nudge, together moving the held-out
+Brier from 0.5717 to 0.5506. The decomposition explains the pattern: the
+remaining loss is resolution, not calibration, so recalibration-style fixes keep
+washing out, and only changes that add genuine new signal hold up out of sample.
+
 ## Methodology in depth
 
 ### Draw modelling
@@ -316,6 +336,20 @@ calibration (reliability 0.0226 to 0.0136) and sharper separation (resolution
 2010 is marginally worse, and the sparse-team lever still earns nothing. The
 shipped `market_values.csv` is a small **illustrative** sample; replace it with
 real data (see Data below).
+
+### Recent form
+
+Squad value and the fitted ratings move slowly; recent results do not. A
+`FormAdjuster` nudges the win/draw/loss probabilities by each side's recent
+defensive form, the mean goals conceded over its last 5 matches before kickoff
+(leakage-safe, since only prior matches count). Measured on the production
+model's held-out predictions through the export bridge, a conservative
+coefficient cuts the combined Brier from 0.5566 to 0.5506, with the gain almost
+entirely in resolution (sharper separation, the component the model was losing
+to) and improving in all five tournaments. It is shipped and wired into the live
+tracker, so daily predictions carry it. One caveat: the nudge moves the
+probabilities, not the expected goals, so the most-likely-score column still
+comes from the raw model.
 
 ### Calibration
 
