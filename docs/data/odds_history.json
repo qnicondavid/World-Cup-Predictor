@@ -355,5 +355,26 @@
 "Norway": 1.3,
 "Ecuador": 0.9
 }
+},
+{
+"date": "2026-06-30",
+"odds": {
+"Argentina": 28.4,
+"Spain": 16.0,
+"France": 15.3,
+"Colombia": 10.3,
+"Brazil": 9.1,
+"England": 6.2,
+"Morocco": 4.8,
+"Portugal": 2.9,
+"Belgium": 1.2,
+"Switzerland": 1.1,
+"Mexico": 0.9,
+"Norway": 0.9,
+"Ecuador": 0.7,
+"Croatia": 0.6,
+"Canada": 0.4,
+"United States": 0.3
+}
 }
 ]
