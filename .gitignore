@@ -6,3 +6,5 @@ target/
 __pycache__/
 *.pyc
 research/export_predictions.csv
+data/lineups.csv
+data/lineup_values.csv
