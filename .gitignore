@@ -8,3 +8,4 @@ __pycache__/
 research/export_predictions.csv
 data/lineups.csv
 data/lineup_values.csv
+research/.odds_api_key
