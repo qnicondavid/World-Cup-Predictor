@@ -1,7 +1,7 @@
 {
-  "updated": "2026-06-30",
+  "updated": "2026-07-01",
   "model": "Dixon-Coles + market-value prior",
-  "record": {"correct": 47, "evaluated": 76, "brier": 0.5371},
+  "record": {"correct": 47, "evaluated": 76, "brier": 0.5349},
   "resolved": [
     {"date": "Jun 12", "home": "Canada", "away": "Bosnia and Herzegovina", "pick": "Canada", "pHome": 0.7508, "pDraw": 0.1841, "pAway": 0.0650, "predScore": "2-0", "result": "1-1", "hit": false},
     {"date": "Jun 12", "home": "United States", "away": "Paraguay", "pick": "United States", "pHome": 0.3595, "pDraw": 0.2978, "pAway": 0.3427, "predScore": "1-1", "result": "4-1", "hit": true},
@@ -77,8 +77,8 @@
     {"date": "Jun 29", "home": "Brazil", "away": "Japan", "pick": "Brazil", "pHome": 0.4511, "pDraw": 0.2853, "pAway": 0.2637, "predScore": "1-0", "result": "2-1", "hit": true},
     {"date": "Jun 29", "home": "Germany", "away": "Paraguay", "pick": "Germany", "pHome": 0.5269, "pDraw": 0.2675, "pAway": 0.2055, "predScore": "1-0", "result": "1-1", "hit": false},
     {"date": "Jun 29", "home": "Netherlands", "away": "Morocco", "pick": "Morocco", "pHome": 0.3341, "pDraw": 0.3181, "pAway": 0.3478, "predScore": "1-1", "result": "1-1", "hit": false},
-    {"date": "Jun 11", "home": "Mexico", "away": "South Africa", "pick": "Mexico", "pHome": 0.6319, "pDraw": 0.2361, "pAway": 0.1320, "predScore": "1-0", "result": "2-0", "hit": true},
-    {"date": "Jun 11", "home": "South Korea", "away": "Czech Republic", "pick": "South Korea", "pHome": 0.4004, "pDraw": 0.2838, "pAway": 0.3158, "predScore": "1-1", "result": "2-1", "hit": true}
+    {"date": "Jun 11", "home": "Mexico", "away": "South Africa", "pick": "Mexico", "pHome": 0.7520, "pDraw": 0.1552, "pAway": 0.0928, "predScore": "2-0", "result": "2-0", "hit": true},
+    {"date": "Jun 11", "home": "South Korea", "away": "Czech Republic", "pick": "South Korea", "pHome": 0.4375, "pDraw": 0.2288, "pAway": 0.3338, "predScore": "1-1", "result": "2-1", "hit": true}
   ],
   "upcoming": [
     {"date": "Jun 30", "home": "Ivory Coast", "away": "Norway", "pick": "Norway", "pHome": 0.3017, "pDraw": 0.2985, "pAway": 0.3998, "predScore": "1-1"},

@@ -1,6 +1,7 @@
 package com.david.worldcup.tracker;
 
 import com.david.worldcup.elo.DrawModel;
+import com.david.worldcup.goals.Calibration;
 import com.david.worldcup.goals.FormAdjuster;
 import com.david.worldcup.goals.GoalModel;
 import com.david.worldcup.goals.ScorePredictor;
@@ -83,6 +84,7 @@ public final class Tracker {
                             fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());
                     if (form != null) {
                         p = form.adjust(fx.homeTeam(), fx.awayTeam(), fx.date(), p);
+                        p = Calibration.transferDraw(p);
                     }
                     Optional<GoalModel.GoalRates> g = model.expectedGoals(
                             fx.homeTeam(), fx.awayTeam(), fx.neutralVenue());

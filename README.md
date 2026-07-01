@@ -18,7 +18,7 @@ the tables below automatically.
 <!-- TRACKER:START -->
 Δ is the total goal difference from the actual result (🎯 = exact), and Brier is multiclass.
 
-**Record: 47/76 picks correct (61.8%), multiclass Brier 0.537, mean goal error 1.9** (uniform guess = 0.667)
+**Record: 47/76 picks correct (61.8%), multiclass Brier 0.535, mean goal error 1.9** (uniform guess = 0.667)
 
 | Date | Match | Winner | H/D/A % | Score (xG) | Result | Δ | Hit |
 |---|---|---|---|---|---|---|---|
@@ -96,8 +96,8 @@ the tables below automatically.
 | Jun 13 | Australia vs Turkey | Turkey | 25/28/48% | 1-1 (1.1–1.6) | 2-0 | 2 | ❌ |
 | Jun 12 | Canada vs Bosnia and Herzegovina | Canada | 75/18/7% | 2-0 (2.7–0.6) | 1-1 | 2 | ❌ |
 | Jun 12 | United States vs Paraguay | United States | 36/30/34% | 1-1 (1.3–1.3) | 4-1 | 3 | ✅ |
-| Jun 11 | Mexico vs South Africa | Mexico | 63/24/13% | 1-0 (1.8–0.7) | 2-0 | 1 | ✅ |
-| Jun 11 | South Korea vs Czech Republic | South Korea | 40/28/32% | 1-1 (1.3–1.1) | 2-1 | 1 | ✅ |
+| Jun 11 | Mexico vs South Africa | Mexico | 75/16/9% | 2-0 (2.0–0.6) | 2-0 | 0 🎯 | ✅ |
+| Jun 11 | South Korea vs Czech Republic | South Korea | 44/23/33% | 1-1 (1.2–1.2) | 2-1 | 1 | ✅ |
 
 **Locked for upcoming matches:**
 
@@ -122,7 +122,7 @@ the tables below automatically.
 ### Championship odds
 
 <!-- TITLE:START -->
-The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-06-30. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
+The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-07-01. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
 
 | # | Team | Title | Final | Semis |
 |---|---|---|---|---|

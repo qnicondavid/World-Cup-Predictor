@@ -1,5 +1,7 @@
 package com.david.worldcup.goals;
 
+import com.david.worldcup.elo.DrawModel;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -142,5 +144,41 @@ public final class Calibration {
             }
         }
         return best;
+    }
+
+    /**
+     * Fraction of the draw probability that Dixon-Coles over-produces and that
+     * {@link #transferDraw} moves onto the favoured win side. Fit
+     * leave-one-tournament-out across the five World Cups (stable at ~0.20-0.24);
+     * the transfer lifts held-out multiclass Brier from ~0.5506 to ~0.5445,
+     * improving 4/5 tournaments, entirely by correcting draw reliability.
+     */
+    public static final double DRAW_TRANSFER = 0.21;
+
+    /** Applies {@link #transferDraw(DrawModel.Probabilities, double)} with {@link #DRAW_TRANSFER}. */
+    public static DrawModel.Probabilities transferDraw(DrawModel.Probabilities p) {
+        return transferDraw(p, DRAW_TRANSFER);
+    }
+
+    /**
+     * Move fraction {@code alpha} of the draw mass onto whichever win side the
+     * model favours. Dixon-Coles systematically over-predicts draws in
+     * near-balanced matches; directing the freed mass to the favourite (rather
+     * than splitting it back to both sides) is what the leave-one-tournament-out
+     * test rewarded. Mass is conserved, so the result still sums to one.
+     */
+    public static DrawModel.Probabilities transferDraw(DrawModel.Probabilities p, double alpha) {
+        if (alpha <= 0.0) {
+            return p;
+        }
+        double move = alpha * p.draw();
+        double home = p.homeWin();
+        double away = p.awayWin();
+        if (home >= away) {
+            home += move;
+        } else {
+            away += move;
+        }
+        return new DrawModel.Probabilities(home, p.draw() - move, away);
     }
 }

@@ -511,8 +511,9 @@ public final class Main {
             DixonColesModel retro = marketValues.isEmpty()
                     ? DixonColesModel.fit(before, mt.date())
                     : DixonColesModel.fitWithValues(before, mt.date(), marketValues, ValueWeights.DEFAULT);
-            DrawModel.Probabilities pr = form.adjust(mt.homeTeam(), mt.awayTeam(), mt.date(),
-                    retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue()));
+            DrawModel.Probabilities pr = Calibration.transferDraw(
+                    form.adjust(mt.homeTeam(), mt.awayTeam(), mt.date(),
+                            retro.probabilities(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue())));
             var goals = retro.expectedGoals(mt.homeTeam(), mt.awayTeam(), mt.neutralVenue());
             earlyPredictions.add(new PredictionLedger.Prediction(
                     mt.date(), mt.homeTeam(), mt.awayTeam(), mt.neutralVenue(),
@@ -691,8 +692,8 @@ public final class Main {
                         case AWAY_WIN -> "away";
                     };
                     writeExportRow(pw, label, m, pr, actual);
-                    DrawModel.Probabilities adjusted =
-                            form.adjust(m.homeTeam(), m.awayTeam(), m.date(), pr);
+                    DrawModel.Probabilities adjusted = Calibration.transferDraw(
+                            form.adjust(m.homeTeam(), m.awayTeam(), m.date(), pr));
                     writeExportRow(fw, label, m, adjusted, actual);
                 }
             }
