@@ -376,5 +376,26 @@
 "Canada": 0.4,
 "United States": 0.3
 }
+},
+{
+"date": "2026-07-01",
+"odds": {
+"Argentina": 19.6,
+"Spain": 17.7,
+"France": 15.6,
+"Brazil": 14.7,
+"England": 7.5,
+"Mexico": 5.5,
+"Norway": 4.4,
+"Portugal": 3.3,
+"Colombia": 3.3,
+"Switzerland": 1.9,
+"Belgium": 1.8,
+"Morocco": 1.8,
+"United States": 0.8,
+"Croatia": 0.8,
+"Algeria": 0.4,
+"Australia": 0.3
+}
 }
 ]
