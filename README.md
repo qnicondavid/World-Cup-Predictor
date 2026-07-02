@@ -18,10 +18,13 @@ the tables below automatically.
 <!-- TRACKER:START -->
 Δ is the total goal difference from the actual result (🎯 = exact), and Brier is multiclass.
 
-**Record: 50/79 picks correct (63.3%), multiclass Brier 0.532, mean goal error 1.9** (uniform guess = 0.667)
+**Record: 53/82 picks correct (64.6%), multiclass Brier 0.525, mean goal error 1.9** (uniform guess = 0.667)
 
 | Date | Match | Winner | H/D/A % | Score (xG) | Result | Δ | Hit |
 |---|---|---|---|---|---|---|---|
+| Jul 1 | England vs DR Congo | England | 57/30/14% | 1-0 (1.3–0.5) | 2-1 | 2 | ✅ |
+| Jul 1 | Belgium vs Senegal | Belgium | 43/29/28% | 1-1 (1.4–1.0) | 3-2 | 3 | ✅ |
+| Jul 1 | United States vs Bosnia and Herzegovina | United States | 64/21/15% | 2-0 (2.1–0.9) | 2-0 | 0 🎯 | ✅ |
 | Jun 30 | Ivory Coast vs Norway | Norway | 30/30/40% | 1-1 (1.0–1.2) | 1-2 | 1 | ✅ |
 | Jun 30 | France vs Sweden | France | 62/22/16% | 2-0 (2.0–1.0) | 3-0 | 1 | ✅ |
 | Jun 30 | Mexico vs Ecuador | Mexico | 35/34/31% | 0-0 (0.9–0.9) | 2-0 | 2 | ✅ |
@@ -106,9 +109,6 @@ the tables below automatically.
 
 | Date | Match | Winner | H/D/A % | Score (xG) |
 |---|---|---|---|---|
-| Jul 1 | England vs DR Congo | England | 57/30/14% | 1-0 (1.3–0.5) |
-| Jul 1 | Belgium vs Senegal | Belgium | 43/29/28% | 1-1 (1.4–1.0) |
-| Jul 1 | United States vs Bosnia and Herzegovina | United States | 64/21/15% | 2-0 (2.1–0.9) |
 | Jul 2 | Spain vs Austria | Spain | 58/25/17% | 1-0 (1.7–0.8) |
 | Jul 2 | Portugal vs Croatia | Portugal | 50/27/23% | 1-0 (1.5–0.9) |
 | Jul 2 | Switzerland vs Algeria | Switzerland | 40/28/32% | 1-1 (1.4–1.2) |
@@ -118,32 +118,34 @@ the tables below automatically.
 | Jul 4 | Canada vs Morocco | Morocco | 22/34/45% | 0-1 (0.7–1.1) |
 | Jul 4 | Paraguay vs France | France | 13/19/68% | 0-1 (0.6–1.7) |
 | Jul 5 | Brazil vs Norway | Brazil | 62/19/19% | 1-1 (1.7–1.0) |
+| Jul 5 | Mexico vs England | England | 22/22/55% | 0-1 (0.9–1.5) |
+| Jul 6 | United States vs Belgium | Belgium | 30/21/49% | 1-1 (1.3–1.5) |
 
 <!-- TRACKER:END -->
 
 ### Championship odds
 
 <!-- TITLE:START -->
-The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-07-01. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
+The model's championship odds from 10,000 Monte Carlo simulations, updated 2026-07-02. They inherit the simulator's simplifications (knockout bracket paired in schedule order, games as neutral with no draws), so read them as the model's view, not a hard forecast.
 
 | # | Team | Title | Final | Semis |
 |---|---|---|---|---|
-| 1 | Argentina | 19.6% | 28.4% | 41.6% |
-| 2 | Spain | 17.7% | 32.2% | 45.6% |
-| 3 | France | 15.6% | 23.3% | 34.9% |
-| 4 | Brazil | 14.7% | 27.0% | 64.5% |
-| 5 | England | 7.5% | 17.8% | 33.7% |
-| 6 | Mexico | 5.5% | 15.1% | 32.8% |
-| 7 | Norway | 4.4% | 10.2% | 35.5% |
-| 8 | Portugal | 3.3% | 8.8% | 16.2% |
-| 9 | Colombia | 3.3% | 6.8% | 13.5% |
-| 10 | Switzerland | 1.9% | 6.0% | 13.8% |
-| 11 | Belgium | 1.8% | 6.4% | 16.4% |
-| 12 | Morocco | 1.8% | 3.8% | 8.1% |
-| 13 | United States | 0.8% | 3.1% | 10.0% |
-| 14 | Croatia | 0.8% | 2.9% | 6.4% |
-| 15 | Algeria | 0.4% | 2.0% | 5.5% |
-| 16 | Australia | 0.3% | 2.0% | 6.2% |
+| 1 | Argentina | 20.2% | 28.4% | 0.0% |
+| 2 | France | 16.0% | 23.0% | 0.0% |
+| 3 | Spain | 15.9% | 23.5% | 0.0% |
+| 4 | Brazil | 11.2% | 24.8% | 0.0% |
+| 5 | England | 8.5% | 20.1% | 0.0% |
+| 6 | Belgium | 7.7% | 25.2% | 0.0% |
+| 7 | Mexico | 4.1% | 11.4% | 0.0% |
+| 8 | Colombia | 3.8% | 7.1% | 0.0% |
+| 9 | Portugal | 2.9% | 5.6% | 0.0% |
+| 10 | Norway | 2.4% | 7.6% | 0.0% |
+| 11 | United States | 2.2% | 11.0% | 0.0% |
+| 12 | Morocco | 1.8% | 3.7% | 0.0% |
+| 13 | Switzerland | 1.4% | 3.5% | 0.0% |
+| 14 | Croatia | 0.7% | 1.5% | 0.0% |
+| 15 | Algeria | 0.3% | 1.0% | 0.0% |
+| 16 | Austria | 0.2% | 0.7% | 0.0% |
 
 <!-- TITLE:END -->
 
